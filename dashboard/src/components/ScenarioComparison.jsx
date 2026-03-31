@@ -1,175 +1,131 @@
-import { useState } from "react"
-import { GitCompare, ArrowUp, ArrowDown } from "lucide-react"
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
+﻿import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+} from "recharts"
 
-const AGENT_COLORS = { fixed_timer: "#FF4057", q_learning: "#4A90FF", sarsa: "#00E68C" }
+const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
-const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
-const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8", fontSize: 11 }
-
-const METRIC_OPTS = [
-  { key: "avg_throughput", label: "Throughput", unit: "vehicles", higher: true },
+const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
+const SC_ORDER = ["normal", "rush_hour", "incident", "event", "bus_priority"]
+const METRICS_INFO = [
+  { key: "avg_throughput", label: "Throughput", unit: "veh/ep", higher: true },
   { key: "avg_wait_time", label: "Wait Time", unit: "steps", higher: false },
   { key: "avg_emissions", label: "Emissions", unit: "kg CO\u2082", higher: false },
-  { key: "avg_safety_score", label: "Safety Score", unit: "/ 100", higher: true },
+  { key: "avg_safety_score", label: "Safety", unit: "/100", higher: true },
 ]
+const ttStyle = { background: "#0C1220", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 10, color: "#F1F5F9", fontSize: 11 }
 
 export default function ScenarioComparison({ data }) {
   const cmp = data.scenario_comparison
-  const [metric, setMetric] = useState("avg_throughput")
-  if (!cmp) return <p style={{ color: "var(--text-label)" }}>No comparison data.</p>
+  if (!cmp) return <p style={{ color: "var(--text-label)" }}>No data available</p>
 
-  const scenarios = Object.keys(cmp)
-  const agents = ["fixed_timer", "q_learning", "sarsa"]
-  const mInfo = METRIC_OPTS.find(m => m.key === metric)
-  const isLower = !mInfo?.higher
-
-  const chartData = scenarios.map(sc => {
-    const e = { scenario: SC_LABELS[sc] || sc }
-    agents.forEach(ag => { e[AGENT_LABELS[ag]] = cmp[sc]?.agents?.[ag]?.metrics?.[metric] ?? 0 })
-    return e
-  })
-
-  const allVals = []
-  scenarios.forEach(sc => agents.forEach(ag => allVals.push(cmp[sc]?.agents?.[ag]?.metrics?.[metric] ?? 0)))
-  const minV = Math.min(...allVals), maxV = Math.max(...allVals)
-
-  function heatBg(val) {
-    const n = maxV === minV ? 0.5 : (val - minV) / (maxV - minV)
-    const adj = isLower ? 1 - n : n
-    const h = adj * 120
-    return { bg: "hsl(" + h + ", 65%, 18%)", text: "hsl(" + h + ", 80%, 65%)", border: "hsl(" + h + ", 60%, 28%)" }
+  // Build chart data for each metric
+  function buildChartData(metricKey) {
+    return SC_ORDER.filter(sc => cmp[sc]).map(sc => {
+      const row = { scenario: SC_LABELS[sc] }
+      Object.entries(cmp[sc].agents).forEach(([ag, ad]) => {
+        row[AGENT_LABELS[ag]] = Math.round(ad.metrics[metricKey] * 100) / 100
+      })
+      return row
+    })
   }
 
+  // Improvement table: RL vs Fixed Timer per scenario
+  const improvements = SC_ORDER.filter(sc => cmp[sc]).map(sc => {
+    const agents = cmp[sc].agents
+    const ft = agents.fixed_timer?.metrics
+    const ql = agents.q_learning?.metrics
+    const sa = agents.sarsa?.metrics
+    if (!ft || !ql || !sa) return null
+    return {
+      scenario: SC_LABELS[sc],
+      ql_wait_imp: (((ft.avg_wait_time - ql.avg_wait_time) / ft.avg_wait_time) * 100).toFixed(1),
+      sa_wait_imp: (((ft.avg_wait_time - sa.avg_wait_time) / ft.avg_wait_time) * 100).toFixed(1),
+      ql_tp_imp: (((ql.avg_throughput - ft.avg_throughput) / ft.avg_throughput) * 100).toFixed(1),
+      sa_tp_imp: (((sa.avg_throughput - ft.avg_throughput) / ft.avg_throughput) * 100).toFixed(1),
+      ql_emit_imp: (((ft.avg_emissions - ql.avg_emissions) / ft.avg_emissions) * 100).toFixed(1),
+      sa_emit_imp: (((ft.avg_emissions - sa.avg_emissions) / ft.avg_emissions) * 100).toFixed(1),
+    }
+  }).filter(Boolean)
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Metric Selector */}
-      <div className="card card-compact">
-        <div className="section-subtitle">Select Metric</div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {METRIC_OPTS.map(m => (
-            <button key={m.key} onClick={() => setMetric(m.key)}
-              className={"btn btn-outline " + (metric === m.key ? "active" : "")}>
-              {m.label}
-              <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 4 }}>({m.unit})</span>
-            </button>
-          ))}
-        </div>
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Charts Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {METRICS_INFO.map(mi => (
+          <div key={mi.key} className="card">
+            <div className="section-title">
+              <span className="dot" style={{ background: mi.higher ? "var(--green)" : "var(--gold)" }} />
+              {mi.label} ({mi.unit})
+            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={buildChartData(mi.key)} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
+                <XAxis dataKey="scenario" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={ttStyle} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Bar dataKey="Fixed Timer" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Q-Learning" fill="#3B82F6" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="SARSA" fill="#10B981" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ))}
       </div>
 
-      {/* Bar Chart */}
+      {/* Improvement Table */}
       <div className="card">
         <div className="section-title">
-          <GitCompare size={16} style={{ color: "var(--purple)" }} />
-          {mInfo?.label} Across All Scenarios
-        </div>
-        <ResponsiveContainer width="100%" height={340}>
-          <BarChart data={chartData} barGap={3} barCategoryGap="20%">
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A2236" />
-            <XAxis dataKey="scenario" stroke="#64748B" tick={{ fill: "#CBD5E1", fontSize: 12 }} />
-            <YAxis stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 11 }} />
-            <Tooltip contentStyle={ttStyle} />
-            <Legend wrapperStyle={{ fontSize: 12, color: "#CBD5E1" }} />
-            {agents.map(ag => (
-              <Bar key={ag} dataKey={AGENT_LABELS[ag]} fill={AGENT_COLORS[ag]} radius={[5,5,0,0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Heatmap */}
-      <div className="card">
-        <div className="section-title">
-          <span className="dot" style={{ background: "var(--gold)" }} />
-          Performance Heatmap \u2014 {mInfo?.label}
-        </div>
-        <div style={{ overflowX: "auto" }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Scenario</th>
-                {agents.map(ag => <th key={ag} style={{ textAlign: "center" }}>{AGENT_LABELS[ag]}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {scenarios.map(sc => (
-                <tr key={sc}>
-                  <td style={{ color: "var(--text-primary)", fontWeight: 600 }}>{SC_LABELS[sc]}</td>
-                  {agents.map(ag => {
-                    const val = cmp[sc]?.agents?.[ag]?.metrics?.[metric] ?? 0
-                    const h = heatBg(val)
-                    return (
-                      <td key={ag} style={{ textAlign: "center" }}>
-                        <span style={{
-                          display: "inline-block", padding: "6px 14px", borderRadius: 8,
-                          background: h.bg, color: h.text, border: "1px solid " + h.border,
-                          fontWeight: 700, fontSize: 12, fontFamily: "monospace",
-                        }}>
-                          {val?.toFixed(metric === "avg_emissions" ? 4 : 1)}
-                        </span>
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, fontSize: 11, color: "var(--text-muted)" }}>
-          <span>{isLower ? "Better \u2192" : "\u2190 Worse"}</span>
-          <div style={{
-            flex: 1, height: 6, borderRadius: 6,
-            background: isLower
-              ? "linear-gradient(to right, hsl(120,65%,22%), hsl(0,65%,22%))"
-              : "linear-gradient(to right, hsl(0,65%,22%), hsl(120,65%,22%))"
-          }} />
-          <span>{isLower ? "\u2190 Worse" : "Better \u2192"}</span>
-        </div>
-      </div>
-
-      {/* RL Improvement */}
-      <div className="card">
-        <div className="section-title">
-          <span className="dot" style={{ background: "var(--green)" }} />
-          RL Improvement Over Fixed Timer
+          <span className="dot" style={{ background: "var(--teal)" }} />
+          RL Improvement vs Fixed Timer (%)
         </div>
         <table className="data-table">
           <thead>
             <tr>
               <th>Scenario</th>
-              <th className="text-right">Q-Learning vs Fixed</th>
-              <th className="text-right">SARSA vs Fixed</th>
+              <th style={{ textAlign: "center" }} colSpan={2}>Wait Time Reduction</th>
+              <th style={{ textAlign: "center" }} colSpan={2}>Throughput Gain</th>
+              <th style={{ textAlign: "center" }} colSpan={2}>Emission Reduction</th>
+            </tr>
+            <tr>
+              <th></th>
+              <th style={{ textAlign: "right", color: "#3B82F6" }}>Q-Learn</th>
+              <th style={{ textAlign: "right", color: "#10B981" }}>SARSA</th>
+              <th style={{ textAlign: "right", color: "#3B82F6" }}>Q-Learn</th>
+              <th style={{ textAlign: "right", color: "#10B981" }}>SARSA</th>
+              <th style={{ textAlign: "right", color: "#3B82F6" }}>Q-Learn</th>
+              <th style={{ textAlign: "right", color: "#10B981" }}>SARSA</th>
             </tr>
           </thead>
           <tbody>
-            {scenarios.map(sc => {
-              const fx = cmp[sc]?.agents?.fixed_timer?.metrics?.[metric] ?? 0
-              const ql = cmp[sc]?.agents?.q_learning?.metrics?.[metric] ?? 0
-              const sa = cmp[sc]?.agents?.sarsa?.metrics?.[metric] ?? 0
-              const pQL = fx ? ((ql - fx) / Math.abs(fx) * 100) : 0
-              const pSA = fx ? ((sa - fx) / Math.abs(fx) * 100) : 0
-              const qlOk = isLower ? pQL < 0 : pQL > 0
-              const saOk = isLower ? pSA < 0 : pSA > 0
-              return (
-                <tr key={sc}>
-                  <td style={{ color: "var(--text-primary)", fontWeight: 600 }}>{SC_LABELS[sc]}</td>
-                  <td className="text-right">
-                    <span className={"badge " + (qlOk ? "badge-green" : "badge-red")}>
-                      {qlOk ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                      {Math.abs(pQL).toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="text-right">
-                    <span className={"badge " + (saOk ? "badge-green" : "badge-red")}>
-                      {saOk ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-                      {Math.abs(pSA).toFixed(1)}%
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
+            {improvements.map((r, i) => (
+              <tr key={i}>
+                <td className="highlight">{r.scenario}</td>
+                <td className="mono" style={{ textAlign: "right", color: Number(r.ql_wait_imp) > 0 ? "var(--green)" : "var(--red)" }}>
+                  {Number(r.ql_wait_imp) > 0 ? "+" : ""}{r.ql_wait_imp}%
+                </td>
+                <td className="mono" style={{ textAlign: "right", color: Number(r.sa_wait_imp) > 0 ? "var(--green)" : "var(--red)" }}>
+                  {Number(r.sa_wait_imp) > 0 ? "+" : ""}{r.sa_wait_imp}%
+                </td>
+                <td className="mono" style={{ textAlign: "right", color: Number(r.ql_tp_imp) > 0 ? "var(--green)" : "var(--red)" }}>
+                  {Number(r.ql_tp_imp) > 0 ? "+" : ""}{r.ql_tp_imp}%
+                </td>
+                <td className="mono" style={{ textAlign: "right", color: Number(r.sa_tp_imp) > 0 ? "var(--green)" : "var(--red)" }}>
+                  {Number(r.sa_tp_imp) > 0 ? "+" : ""}{r.sa_tp_imp}%
+                </td>
+                <td className="mono" style={{ textAlign: "right", color: Number(r.ql_emit_imp) > 0 ? "var(--green)" : "var(--red)" }}>
+                  {Number(r.ql_emit_imp) > 0 ? "+" : ""}{r.ql_emit_imp}%
+                </td>
+                <td className="mono" style={{ textAlign: "right", color: Number(r.sa_emit_imp) > 0 ? "var(--green)" : "var(--red)" }}>
+                  {Number(r.sa_emit_imp) > 0 ? "+" : ""}{r.sa_emit_imp}%
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+        <div style={{ marginTop: 10, fontSize: 10, color: "var(--text-muted)" }}>
+          Positive values (green) indicate RL outperforms Fixed Timer. Strongest improvements occur in Rush Hour and Incident scenarios.
+        </div>
       </div>
     </div>
   )

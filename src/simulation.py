@@ -52,6 +52,7 @@ class SimulationRunner:
         self.num_episodes = num_episodes
         self.steps_per_episode = steps_per_episode
         self.results = {}
+        self.trained_controllers = {}  # Store trained agents for live sim
 
     def train_agent(self, agent_type, scenario, num_episodes=None, verbose=True):
         """
@@ -60,6 +61,7 @@ class SimulationRunner:
         Returns:
             training_history: episode-by-episode metrics
             final_metrics: summary of final performance
+            controller: the trained MultiAgentController (for reuse in live sim)
         """
         if num_episodes is None:
             num_episodes = self.num_episodes
@@ -71,13 +73,13 @@ class SimulationRunner:
         agent_kwargs = {}
         if agent_type == "q_learning":
             agent_kwargs = {
-                "alpha": 0.1, "gamma": 0.95,
-                "epsilon": 1.0, "epsilon_decay": 0.995, "epsilon_min": 0.01
+                "alpha": 0.15, "gamma": 0.95,
+                "epsilon": 1.0, "epsilon_decay": 0.993, "epsilon_min": 0.01
             }
         elif agent_type == "sarsa":
             agent_kwargs = {
-                "alpha": 0.1, "gamma": 0.95,
-                "epsilon": 1.0, "epsilon_decay": 0.995, "epsilon_min": 0.01
+                "alpha": 0.12, "gamma": 0.95,
+                "epsilon": 1.0, "epsilon_decay": 0.993, "epsilon_min": 0.01
             }
         elif agent_type == "fixed_timer":
             agent_kwargs = {"switch_interval": 15}
@@ -165,7 +167,7 @@ class SimulationRunner:
             "total_episodes": num_episodes
         }
 
-        return history, final_metrics
+        return history, final_metrics, controller
 
     def run_all_experiments(self, verbose=True):
         """
@@ -183,8 +185,11 @@ class SimulationRunner:
             scenario_results = {}
 
             for agent_type in self.AGENT_TYPES:
-                history, final_metrics = self.train_agent(
+                history, final_metrics, controller = self.train_agent(
                     agent_type, scenario, verbose=verbose)
+
+                # Store trained controller for live sim reuse
+                self.trained_controllers[(scenario, agent_type)] = controller
 
                 scenario_results[agent_type] = {
                     "history": history,
@@ -251,26 +256,37 @@ class SimulationRunner:
                                        scenario="normal", num_steps=100):
         """
         Generate step-by-step simulation data for live dashboard visualization.
+        Uses TRAINED controllers when available for realistic learned behavior.
+        Also exports Q-values for XAI (Explainable AI) panel.
         """
         env = TrafficEnvironment(scenario=scenario,
                                   time_steps_per_episode=num_steps)
 
-        # Use a pre-trained style: lower epsilon for exploitation
-        agent_kwargs = {}
-        if agent_type == "q_learning":
-            agent_kwargs = {
-                "alpha": 0.05, "gamma": 0.95,
-                "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1
-            }
-        elif agent_type == "sarsa":
-            agent_kwargs = {
-                "alpha": 0.05, "gamma": 0.95,
-                "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1
-            }
-        elif agent_type == "fixed_timer":
-            agent_kwargs = {"switch_interval": 15}
-
-        controller = MultiAgentController(agent_type=agent_type, **agent_kwargs)
+        # Use trained controller if available, otherwise create fresh
+        key = (scenario, agent_type)
+        if key in self.trained_controllers:
+            controller = self.trained_controllers[key]
+            # Set epsilon to near-zero for exploitation (show learned policy)
+            for agent in controller.agents:
+                if hasattr(agent, 'epsilon'):
+                    agent.epsilon = 0.02  # Tiny exploration for variety
+            print(f"    Using trained {agent_type} controller for live sim")
+        else:
+            agent_kwargs = {}
+            if agent_type == "q_learning":
+                agent_kwargs = {
+                    "alpha": 0.05, "gamma": 0.95,
+                    "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1
+                }
+            elif agent_type == "sarsa":
+                agent_kwargs = {
+                    "alpha": 0.05, "gamma": 0.95,
+                    "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1
+                }
+            elif agent_type == "fixed_timer":
+                agent_kwargs = {"switch_interval": 15}
+            controller = MultiAgentController(agent_type=agent_type, **agent_kwargs)
+            print(f"    No trained controller for {agent_type}/{scenario}, using fresh")
 
         states = env.reset()
         frames = []
@@ -278,6 +294,30 @@ class SimulationRunner:
         for step in range(num_steps):
             actions = controller.choose_actions(states)
             next_states, rewards, done, info = env.step(actions)
+
+            # Extract Q-values for XAI (only for RL agents)
+            q_values_data = []
+            for i, agent in enumerate(controller.agents):
+                if hasattr(agent, 'q_table'):
+                    state = states[i]
+                    qvals = agent.q_table[state].tolist()
+                    best_action = int(np.argmax(qvals))
+                    q_max = float(max(qvals))
+                    q_second = float(sorted(qvals)[-2]) if len(qvals) > 1 else q_max
+                    confidence = min(100, max(10, (q_max - q_second) * 25 + 50))
+                    q_values_data.append({
+                        "q_values": [round(float(q), 3) for q in qvals],
+                        "best_action": best_action,
+                        "confidence": round(confidence, 1),
+                        "state_visits": int(agent.training_steps // 16)
+                    })
+                else:
+                    q_values_data.append({
+                        "q_values": [0, 0, 0],
+                        "best_action": int(actions[i]),
+                        "confidence": 50.0,
+                        "state_visits": 0
+                    })
 
             # Record frame
             grid_state = env.get_grid_state()
@@ -291,7 +331,8 @@ class SimulationRunner:
                     "hour": info["hour"]
                 },
                 "actions": [int(a) for a in actions],
-                "rewards": [round(float(r), 2) for r in rewards]
+                "rewards": [round(float(r), 2) for r in rewards],
+                "q_values": q_values_data
             }
             frames.append(frame)
 

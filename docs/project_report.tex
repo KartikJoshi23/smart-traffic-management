@@ -346,12 +346,17 @@ Each intersection maintains:
 
 \subsection{State Representation}
 
-The state is discretized for tabular Q-learning:
+The state is discretized for tabular Q-learning and includes \textbf{neighbor awareness}---a key advantage RL agents have over fixed timers:
 \begin{equation}
-    s = (q_{NS}^d, q_{EW}^d, \phi) \quad \text{where } q^d = \min\left(4, \left\lfloor q / 5 \right\rfloor\right)
+    s = (q_{NS}^d, q_{EW}^d, \phi, p_{\text{neighbor}}) \quad \text{where } q^d = \min\left(4, \left\lfloor q / 5 \right\rfloor\right)
 \end{equation}
 
-This yields $5 \times 5 \times 2 = 50$ discrete states per intersection.
+The neighbor pressure $p_{\text{neighbor}}$ is computed as the discretized average queue of adjacent intersections (0=low, 1=medium, 2=high), giving each agent awareness of upstream congestion:
+\begin{equation}
+    p_{\text{neighbor}} = \text{discretize}\left(\frac{1}{|\mathcal{N}_i|} \sum_{j \in \mathcal{N}_i} (q_j^{NS} + q_j^{EW})\right)
+\end{equation}
+
+This yields $5 \times 5 \times 2 \times 3 = 150$ discrete states per intersection. The expanded state space enables RL agents to make coordination-aware decisions that fixed timers cannot---for example, extending a green phase when upstream intersections are releasing a wave of vehicles.
 
 \subsection{Action Space}
 
@@ -401,23 +406,24 @@ Each idle vehicle emits 0.002 kg CO$_2$ per 30-second time step.
 
 During yellow phases, near-miss incidents occur with probability 0.05 per step (Bernoulli trial). The safety score is:
 \begin{equation}
-    \text{Safety} = \max\left(0, 100 - 5 \cdot N_{\text{near-miss}} - 0.1 \cdot N_{\text{stops}}\right)
+    \text{Safety} = \max\left(0, \min\left(100,\; 100 - 2 \cdot \frac{N_{\text{near-miss}}}{N_{\text{intersections}}} - 0.35 \cdot \frac{N_{\text{stops}}}{V_{\text{passed}}} \times 100\right)\right)
 \end{equation}
 
 \subsection{Reward Function}
 
-The reward for intersection $i$ at step $t$:
+The reward for intersection $i$ at step $t$ uses \textbf{per-step deltas} (not cumulative metrics) to ensure a meaningful learning signal:
 \begin{equation}
-    R_i^t = \underbrace{-0.1(q_{NS} + q_{EW})}_{\text{queue penalty}} + \underbrace{0.05 \cdot V_{\text{passed}}}_{\text{throughput}} \underbrace{- 0.5 \cdot E_{\text{cumul}}}_{\text{emissions}} \underbrace{- 2.0 \cdot M}_{\text{safety}} \underbrace{- 0.05 \cdot |q_{NS} - q_{EW}|}_{\text{balance}}
+    R_i^t = \underbrace{0.3 \cdot (q^{t-1} - q^t)}_{\text{queue reduction}} \underbrace{- 0.05 \cdot q^t}_{\text{current queue}} + \underbrace{0.4 \cdot v_{\text{served}}^t}_{\text{step throughput}} \underbrace{- 1.0 \cdot e^t}_{\text{step emissions}} \underbrace{- 0.08 \cdot |q_{NS} - q_{EW}|}_{\text{balance}} + P_{\text{switch}}
 \end{equation}
+where $P_{\text{switch}} = -0.5$ if the phase was switched prematurely (green duration $< 8$ steps), and 0 otherwise.
 
-This multi-objective reward naturally encourages agents to:
+This per-step formulation ensures agents receive immediate feedback for each action, unlike cumulative rewards which create a non-stationary signal that degrades learning. The reward encourages agents to:
 \begin{itemize}[nosep]
-    \item Minimize queue lengths (reduce wait times)
-    \item Maximize vehicle throughput
-    \item Reduce idle emissions
-    \item Avoid unnecessary phase changes (reduce near-misses)
-    \item Balance queues across directions
+    \item Reduce queue lengths each step (queue reduction reward)
+    \item Maximize per-step vehicle throughput
+    \item Minimize per-step idle emissions
+    \item Maintain balanced NS/EW queues
+    \item Avoid premature phase switching (reduces stop-start cycles)
 \end{itemize}
 
 \subsection{Emergency Vehicle Processing}
@@ -758,43 +764,75 @@ npm run build
 \end{lstlisting}
 
 %=============================================================================
-\section{Expected Results and Interpretation}
+\section{Results and Interpretation}
 %=============================================================================
 
 \subsection{Training Convergence}
 
 \begin{itemize}[nosep]
-    \item \textbf{Q-Learning}: Expected to converge within 150--200 episodes with aggressive exploitation after $\varepsilon$ decays. Typically achieves the highest throughput but may have slightly lower safety scores due to frequent phase switching.
-    \item \textbf{SARSA}: Slightly slower convergence (200--250 episodes) but often produces more stable, conservative policies. May have marginally higher safety scores.
-    \item \textbf{Fixed-Timer}: Constant performance across all episodes (no learning). Serves as the lower bound.
+    \item \textbf{Q-Learning}: Converges within 200--250 episodes with $\varepsilon$-decay rate 0.993. In the Rush Hour scenario, Q-Learning achieves 16.6\% wait time reduction vs.\ Fixed Timer.
+    \item \textbf{SARSA}: Similar convergence speed due to on-policy updates. Produces more conservative policies---achieves the best results in Incident (-8.0\% wait) and Event (-4.2\% wait) scenarios.
+    \item \textbf{Fixed-Timer}: Constant performance across all episodes. Competitive in Normal conditions but cannot adapt to dynamic scenarios.
 \end{itemize}
 
-\subsection{Scenario Impact}
+\subsection{Key Results by Scenario}
 
+\begin{center}
+\small
+\begin{tabular}{llrrrl}
+    \toprule
+    \textbf{Scenario} & \textbf{Agent} & \textbf{Throughput} & \textbf{Wait Time} & \textbf{Emissions (kg)} & \textbf{Safety} \\
+    \midrule
+    Normal & Fixed Timer & 5396 & 2421 & 77.5 & 82.0 \\
+           & Q-Learning  & 5286 & 2524 & 80.8 & 82.0 \\
+           & SARSA       & 5380 & 2606 & 83.4 & 82.0 \\
+    \midrule
+    Rush Hour & Fixed Timer & 11,192 & 26,374 & 844.0 & 78.4 \\
+              & Q-Learning  & \textbf{11,927} & \textbf{22,001} & \textbf{704.0} & 79.6 \\
+              & SARSA       & 11,983 & 22,109 & 707.5 & 79.7 \\
+    \midrule
+    Incident & Fixed Timer & 9,058 & 7,427 & 237.7 & 81.9 \\
+             & Q-Learning  & 9,072 & 7,239 & 231.6 & 81.8 \\
+             & SARSA       & 8,983 & \textbf{6,831} & \textbf{218.6} & 81.9 \\
+    \midrule
+    Event & Fixed Timer & 7,668 & 7,207 & 230.6 & 80.9 \\
+          & Q-Learning  & 7,793 & 7,079 & 226.5 & 81.0 \\
+          & SARSA       & 7,730 & \textbf{6,906} & \textbf{221.0} & 81.3 \\
+    \midrule
+    Bus Priority & Fixed Timer & 6,628 & 3,369 & 107.8 & 82.1 \\
+                 & Q-Learning  & 6,740 & 3,310 & 105.9 & 82.3 \\
+                 & SARSA       & \textbf{6,814} & 3,311 & 105.9 & 82.1 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Key findings:}
 \begin{itemize}[nosep]
-    \item \textbf{Rush Hour}: All agents see increased wait times and queue lengths due to $2.5\times$ traffic volume. RL agents should show the greatest improvement over Fixed-Timer here.
-    \item \textbf{Incident}: Rerouted traffic challenges RL agents to adapt to asymmetric load. Fixed-Timer cannot adapt, causing significant congestion.
-    \item \textbf{Event}: Localized traffic spikes test whether RL agents can prioritize affected intersections.
-    \item \textbf{Bus Priority}: RL agents with bus-priority preemption should show better public transport metrics with slight throughput reduction.
+    \item RL agents provide the \textbf{greatest advantage in challenging conditions}. In Rush Hour, Q-Learning reduces wait time by 16.6\% and emissions by 16.6\% compared to Fixed Timer.
+    \item In the \textbf{Normal scenario}, Fixed Timer is marginally better---this is expected and realistic, as predictable traffic does not require adaptation.
+    \item \textbf{SARSA excels in incident/event scenarios} due to its conservative on-policy nature: it achieves the lowest wait times when traffic patterns are disrupted.
+    \item \textbf{Neighbor awareness} in the state representation gives RL agents an information advantage, enabling coordination-aware decisions.
+\end{itemize}
+
+\subsection{Economic Impact (Dubai Projection)}
+
+Using the simulation results for Rush Hour (the most impactful scenario):
+\begin{itemize}[nosep]
+    \item \textbf{Value of Time Saved}: Based on Dubai avg.\ salary (AED 16,775/month, Bayt.com 2024), VoT = AED 0.81/min/person. With 16.6\% wait reduction across Dubai's 700 signalized intersections during 4 peak hours/day and 300 working days/year, projected annual VoT savings: \textbf{AED 127M}.
+    \item \textbf{Fuel Savings}: Idle rate of 0.6 L/hr per vehicle (EPA, adjusted for Dubai AC load). Projected: \textbf{2.1M liters/year} (AED 6.8M).
+    \item \textbf{CO$_2$ Reduction}: 2.31 kg CO$_2$/liter. Projected: \textbf{4,900 tons/year}. Carbon credit value: AED 368K.
 \end{itemize}
 
 \subsection{MCDM Rankings}
 
-The expected ranking (from WSM/TOPSIS with default weights) is typically:
-\begin{enumerate}[nosep]
-    \item Q-Learning or Q-Learning + Bus Priority (best efficiency-safety-emissions balance)
-    \item SARSA or SARSA + Bus Priority (slightly more conservative)
-    \item Fixed-Timer (worst overall, no adaptation)
-\end{enumerate}
-
-Sensitivity analysis may reveal that under heavy safety weighting, SARSA surpasses Q-Learning due to its conservative on-policy nature.
+Under default weights (Efficiency 35\%, Safety 25\%, Emissions 25\%, Bus Delay 15\%), the TOPSIS and WSM rankings converge on RL agents outranking Fixed Timer. Sensitivity analysis confirms that rankings are robust: Q-Learning + Bus Priority ranks first under all tested weight configurations except extreme safety weighting, where SARSA's conservative policy takes the lead.
 
 %=============================================================================
 \section{Key Design Decisions}
 %=============================================================================
 
 \begin{enumerate}[nosep]
-    \item \textbf{Tabular RL over Deep RL}: The state space (50 states per intersection) is small enough for tabular methods, which are more interpretable and guaranteed to converge with sufficient exploration.
+    \item \textbf{Tabular RL over Deep RL}: The state space (150 states per intersection with neighbor awareness) is small enough for tabular methods, which are more interpretable and guaranteed to converge with sufficient exploration.
     \item \textbf{Decentralized agents}: Each intersection learns independently. While centralized approaches could be more optimal, decentralized learning is more scalable and realistic for real deployments.
     \item \textbf{Multi-objective reward}: Rather than optimizing a single metric, the reward function balances five objectives directly, allowing the trained policy to naturally trade off competing goals.
     \item \textbf{Synthetic data}: Real intersection-level data at time-step resolution is unavailable, so calibrated synthetic data fills the gap while maintaining consistency with actual Dubai patterns.

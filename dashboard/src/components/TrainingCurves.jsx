@@ -1,168 +1,151 @@
-import { useState } from "react"
-import { TrendingUp, BookOpen } from "lucide-react"
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
+﻿import { useState } from "react"
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+  AreaChart, Area,
+} from "recharts"
 
-const AGENT_COLORS = { fixed_timer: "#FF4057", q_learning: "#4A90FF", sarsa: "#00E68C" }
+const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
-const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
-const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8", fontSize: 11 }
+const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
+const ttStyle = { background: "#0C1220", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 10, color: "#F1F5F9", fontSize: 11 }
 
 const METRICS = [
-  { key: "episode_rewards", label: "Cumulative Reward" },
-  { key: "avg_wait_times", label: "Avg Wait Time" },
-  { key: "throughputs", label: "Throughput" },
-  { key: "emissions", label: "CO\u2082 Emissions" },
-  { key: "safety_scores", label: "Safety Score" },
+  { key: "episode_rewards", label: "Cumulative Reward", yLabel: "Reward", color: "#06B6D4" },
+  { key: "avg_wait_times", label: "Avg Wait Time", yLabel: "Wait (steps)", color: "#F59E0B" },
+  { key: "throughputs", label: "Throughput", yLabel: "Vehicles", color: "#10B981" },
+  { key: "emissions", label: "Emissions", yLabel: "kg CO\u2082", color: "#EF4444" },
+  { key: "safety_scores", label: "Safety Score", yLabel: "Score", color: "#8B5CF6" },
 ]
 
 export default function TrainingCurves({ data }) {
   const training = data.training_results
-  const [scenario, setScenario] = useState("normal")
+  const [scenario, setScenario] = useState("rush_hour")
   const [metric, setMetric] = useState("episode_rewards")
 
-  if (!training) return <p style={{ color: "var(--text-label)" }}>No training data.</p>
+  if (!training) return <p style={{ color: "var(--text-label)" }}>No training data available</p>
+
   const scData = training[scenario]
-  if (!scData) return <p style={{ color: "var(--text-label)" }}>No data for scenario.</p>
+  if (!scData) return <p style={{ color: "var(--text-label)" }}>No data for this scenario</p>
 
-  const agents = Object.keys(scData)
-  const numEp = scData[agents[0]]?.history?.[metric]?.length || 0
+  // Build chart data
+  const numEpisodes = scData.fixed_timer?.history?.episode_rewards?.length || 0
+  const chartData = []
+  for (let i = 0; i < numEpisodes; i++) {
+    const point = { episode: i + 1 }
+    for (const ag of ["fixed_timer", "q_learning", "sarsa"]) {
+      if (scData[ag]?.history?.[metric]) {
+        point[AGENT_LABELS[ag]] = scData[ag].history[metric][i]
+      }
+    }
+    chartData.push(point)
+  }
 
-  const chartData = Array.from({ length: numEp }, (_, i) => {
+  // Epsilon data
+  const epsilonData = []
+  for (let i = 0; i < numEpisodes; i++) {
     const pt = { episode: i + 1 }
-    agents.forEach(ag => { pt[AGENT_LABELS[ag]] = scData[ag]?.history?.[metric]?.[i] ?? 0 })
-    return pt
-  })
+    for (const ag of ["q_learning", "sarsa"]) {
+      if (scData[ag]?.history?.epsilons) pt[AGENT_LABELS[ag]] = scData[ag].history.epsilons[i]
+    }
+    epsilonData.push(pt)
+  }
 
-  const epsilonData = Array.from({ length: numEp }, (_, i) => ({
-    episode: i + 1,
-    "Q-Learning": scData.q_learning?.history?.epsilons?.[i] ?? 0,
-    "SARSA": scData.sarsa?.history?.epsilons?.[i] ?? 0,
+  const metricInfo = METRICS.find(m => m.key === metric) || METRICS[0]
+
+  // Final metrics table
+  const finalMetrics = Object.entries(scData).map(([ag, d]) => ({
+    agent: AGENT_LABELS[ag],
+    color: AGENT_COLORS[ag],
+    reward: d.final_metrics.avg_reward,
+    wait: d.final_metrics.avg_wait_time,
+    throughput: d.final_metrics.avg_throughput,
+    emissions: d.final_metrics.avg_emissions,
+    safety: d.final_metrics.avg_safety_score,
   }))
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Selectors */}
-      <div className="card card-compact" style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-        <div>
-          <div className="section-subtitle">Scenario</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {Object.keys(training).map(sc => (
-              <button key={sc} onClick={() => setScenario(sc)}
-                className={"btn btn-sm btn-outline " + (scenario === sc ? "active" : "")}>
-                {SC_LABELS[sc] || sc}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="section-subtitle">Metric</div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {METRICS.map(m => (
-              <button key={m.key} onClick={() => setMetric(m.key)}
-                className={"btn btn-sm btn-outline " + (metric === m.key ? "active" : "")}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Controls */}
+      <div className="card" style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, color: "var(--text-label)", fontWeight: 600 }}>Scenario:</span>
+        {Object.entries(SC_LABELS).map(([k, v]) => (
+          <button key={k} className={`btn btn-sm ${scenario === k ? "btn-outline active" : "btn-outline"}`}
+            onClick={() => setScenario(k)}>{v}</button>
+        ))}
+        <div style={{ width: 1, height: 20, background: "var(--border-medium)", margin: "0 4px" }} />
+        <span style={{ fontSize: 11, color: "var(--text-label)", fontWeight: 600 }}>Metric:</span>
+        {METRICS.map(m => (
+          <button key={m.key} className={`btn btn-sm ${metric === m.key ? "btn-outline active" : "btn-outline"}`}
+            onClick={() => setMetric(m.key)}>{m.label}</button>
+        ))}
       </div>
 
       {/* Main Chart */}
       <div className="card">
         <div className="section-title">
-          <TrendingUp size={16} style={{ color: "var(--blue)" }} />
-          {METRICS.find(m => m.key === metric)?.label}{" \u2014 "}{SC_LABELS[scenario]}
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{numEp}{" episodes · 200 steps each"}</span>
+          <span className="dot" style={{ background: metricInfo.color }} />
+          {metricInfo.label} {"\u2014"} {SC_LABELS[scenario]} ({numEpisodes} Episodes)
         </div>
-        <ResponsiveContainer width="100%" height={380}>
-          <AreaChart data={chartData}>
-            <defs>
-              {agents.map(ag => (
-                <linearGradient key={ag} id={"tg_" + ag} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={AGENT_COLORS[ag]} stopOpacity={0.25} />
-                  <stop offset="100%" stopColor={AGENT_COLORS[ag]} stopOpacity={0} />
-                </linearGradient>
-              ))}
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A2236" />
-            <XAxis dataKey="episode" stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 11 }}
-              label={{ value: "Episode", position: "insideBottomRight", offset: -5, style: { fill: "#64748B", fontSize: 11 } }} />
-            <YAxis stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 11 }} />
+        <ResponsiveContainer width="100%" height={320}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
+            <XAxis dataKey="episode" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: "Episode", position: "insideBottom", offset: -5, fill: "#64748B", fontSize: 10 }} />
+            <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: metricInfo.yLabel, angle: -90, position: "insideLeft", fill: "#64748B", fontSize: 10 }} />
             <Tooltip contentStyle={ttStyle} />
-            <Legend wrapperStyle={{ fontSize: 12, color: "#CBD5E1", paddingTop: 12 }} />
-            {agents.map(ag => (
-              <Area key={ag} type="monotone" dataKey={AGENT_LABELS[ag]}
-                stroke={AGENT_COLORS[ag]} strokeWidth={2.5} fill={"url(#tg_" + ag + ")"} dot={false} />
+            <Legend wrapperStyle={{ fontSize: 11, color: "#94A3B8" }} />
+            {Object.entries(AGENT_COLORS).map(([ag, color]) => (
+              <Line key={ag} type="monotone" dataKey={AGENT_LABELS[ag]}
+                stroke={color} strokeWidth={1.5} dot={false} />
             ))}
-          </AreaChart>
+          </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Epsilon Decay */}
-      <div className="card">
-        <div className="section-title">
-          <BookOpen size={16} style={{ color: "var(--purple)" }} />
-          {"Exploration Rate (\u03b5) Decay"}
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{"\u03b5-greedy · decay = 0.995"}</span>
+      {/* Epsilon + Summary */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="card">
+          <div className="section-title">
+            <span className="dot" style={{ background: "var(--gold)" }} />
+            Exploration Rate ({"\u03B5"}-Decay)
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={epsilonData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
+              <XAxis dataKey="episode" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+              <Tooltip contentStyle={ttStyle} />
+              <Area type="monotone" dataKey="Q-Learning" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} />
+              <Area type="monotone" dataKey="SARSA" stroke="#10B981" fill="#10B981" fillOpacity={0.1} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={epsilonData}>
-            <defs>
-              <linearGradient id="epsGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1A2236" />
-            <XAxis dataKey="episode" stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 10 }} />
-            <YAxis stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 10 }} domain={[0, 1]} />
-            <Tooltip contentStyle={ttStyle} />
-            <Legend wrapperStyle={{ fontSize: 11, color: "#CBD5E1" }} />
-            <Area type="monotone" dataKey="Q-Learning" stroke="#3B82F6" fill="url(#epsGrad)" strokeWidth={2} dot={false} />
-            <Area type="monotone" dataKey="SARSA" stroke="#10B981" fill="transparent" strokeWidth={2} dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
 
-      {/* Final Performance */}
-      <div className="card">
-        <div className="section-title">
-          <span className="dot" style={{ background: "var(--gold)" }} />
-          Converged Performance (Last 50 Episodes) \u2014 {SC_LABELS[scenario]}
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Agent</th>
-              <th className="text-right">Avg Reward</th>
-              <th className="text-right">Throughput</th>
-              <th className="text-right">Wait Time</th>
-              <th className="text-right">Emissions</th>
-              <th className="text-right">Safety</th>
-            </tr>
-          </thead>
-          <tbody>
-            {agents.map(ag => {
-              const fm = scData[ag]?.final_metrics
-              if (!fm) return null
-              return (
-                <tr key={ag}>
-                  <td>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: AGENT_COLORS[ag] }} />
-                      <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{AGENT_LABELS[ag]}</span>
-                    </span>
-                  </td>
-                  <td className="text-right mono">{fm.avg_reward?.toFixed(1)}</td>
-                  <td className="text-right mono">{fm.avg_throughput?.toFixed(1)}</td>
-                  <td className="text-right mono">{fm.avg_wait_time?.toFixed(1)}</td>
-                  <td className="text-right mono">{fm.avg_emissions?.toFixed(4)}</td>
-                  <td className="text-right mono">{fm.avg_safety_score?.toFixed(1)}</td>
+        <div className="card">
+          <div className="section-title">
+            <span className="dot" style={{ background: "var(--teal)" }} />
+            Final Performance (Last 50 Episodes)
+          </div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Agent</th><th style={{ textAlign: "right" }}>Reward</th>
+                <th style={{ textAlign: "right" }}>Wait</th><th style={{ textAlign: "right" }}>Throughput</th>
+                <th style={{ textAlign: "right" }}>Safety</th>
+              </tr>
+            </thead>
+            <tbody>
+              {finalMetrics.map((r, i) => (
+                <tr key={i}>
+                  <td><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: r.color, marginRight: 6 }} />{r.agent}</td>
+                  <td className="mono" style={{ textAlign: "right" }}>{r.reward.toFixed(0)}</td>
+                  <td className="mono" style={{ textAlign: "right" }}>{r.wait.toFixed(0)}</td>
+                  <td className="mono highlight" style={{ textAlign: "right" }}>{r.throughput.toFixed(0)}</td>
+                  <td className="mono" style={{ textAlign: "right" }}>{r.safety.toFixed(1)}</td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

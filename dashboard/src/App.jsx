@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { LayoutDashboard, Play, TrendingUp, GitCompare, Scale, GitFork, ExternalLink } from "lucide-react"
+﻿import { useState, useEffect } from "react"
+import { LayoutDashboard, Play, TrendingUp, GitCompare, Scale, ExternalLink } from "lucide-react"
 import Overview from "./components/Overview"
 import LiveSimulation from "./components/LiveSimulation"
 import TrainingCurves from "./components/TrainingCurves"
@@ -32,7 +32,7 @@ export default function App() {
           try {
             const res = await fetch("/data/" + f + ".json")
             if (res.ok) results[f] = await res.json()
-          } catch { /* skip missing */ }
+          } catch { /* skip */ }
         }
         setData(results)
       } finally { setLoading(false) }
@@ -42,94 +42,64 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-page)" }}>
-      {/* Top accent line — traffic light gradient */}
-      <div style={{ height: 3, background: "linear-gradient(90deg, #FF4057 0%, #FFB800 30%, #00E68C 60%, #00D4FF 100%)" }} />
+      <div style={{ height: 3, background: "linear-gradient(90deg, #EF4444 0%, #F59E0B 30%, #10B981 60%, #06B6D4 100%)" }} />
 
-      {/* Header */}
       <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12,
-              background: "linear-gradient(135deg, var(--teal-dim), var(--blue-dim))",
-              border: "1px solid var(--border-medium)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 22
-            }}>
-              🚦
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, var(--teal-dim), var(--blue-dim))", border: "1px solid var(--border-medium)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+              {"🚦"}
             </div>
             <div>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+              <h1 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
                 Dubai Smart Traffic Management
               </h1>
-              <p style={{ fontSize: 12, color: "var(--text-label)", marginTop: 2 }}>
-                Multi-Agent RL · Q-Learning & SARSA · WSM & TOPSIS Decision Analysis
+              <p style={{ fontSize: 11, color: "var(--text-label)", marginTop: 1 }}>
+                Multi-Agent RL {"\u00B7"} Q-Learning & SARSA {"\u00B7"} WSM & TOPSIS Decision Analysis
               </p>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <a href="https://github.com/KartikJoshi23/smart-traffic-management" target="_blank" rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-label)", fontSize: 12, textDecoration: "none", transition: "all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-medium)"; e.currentTarget.style.color = "var(--text-primary)" }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-subtle)"; e.currentTarget.style.color = "var(--text-label)" }}>
-              <GitFork size={14} /> GitHub <ExternalLink size={10} />
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 7, background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-label)", fontSize: 11, textDecoration: "none" }}>
+              GitHub <ExternalLink size={10} />
             </a>
-            <div className="badge-green" style={{ gap: 6 }}>
+            <div className="badge-green" style={{ gap: 5, padding: "4px 10px" }}>
               <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />
               System Online
             </div>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>MAIB · RDMU · Group 2</span>
           </div>
         </div>
       </header>
 
-      {/* Navigation */}
       <nav style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "8px 32px", display: "flex", gap: 6, overflowX: "auto" }}>
-          {TABS.map(t => {
-            const Icon = t.icon
-            return (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={"nav-tab" + (tab === t.id ? " active" : "")}>
-                <Icon size={16} />
-                {t.label}
-              </button>
-            )
-          })}
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "8px 28px", display: "flex", gap: 6, overflowX: "auto" }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} className={`nav-tab ${tab === t.id ? "active" : ""}`}>
+              <t.icon size={15} /> {t.label}
+            </button>
+          ))}
         </div>
       </nav>
 
-      {/* Main */}
-      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "24px 32px" }}>
+      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "24px 28px" }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "120px 0" }}>
-            <div style={{ width: 36, height: 36, border: "3px solid var(--border-subtle)", borderTopColor: "var(--teal)", borderRadius: "50%", margin: "0 auto 16px" }} className="animate-spin" />
-            <p style={{ color: "var(--text-label)", fontSize: 14 }}>Loading simulation data...</p>
-          </div>
-        ) : !data.training_results ? (
-          <div style={{ textAlign: "center", padding: "120px 0" }}>
-            <p style={{ color: "var(--text-secondary)", fontSize: 18, marginBottom: 8 }}>No simulation data found</p>
-            <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-              Run <code style={{ padding: "4px 10px", borderRadius: 8, background: "var(--bg-elevated)", color: "var(--teal)", fontSize: 13 }}>python main.py</code> to generate results
-            </p>
-          </div>
+          <div style={{ textAlign: "center", padding: 60, color: "var(--text-label)" }}>Loading simulation data...</div>
         ) : (
-          <div key={tab} className="fade-up">
+          <>
             {tab === "overview" && <Overview data={data} />}
             {tab === "live" && <LiveSimulation data={data} />}
             {tab === "training" && <TrainingCurves data={data} />}
             {tab === "scenarios" && <ScenarioComparison data={data} />}
             {tab === "mcdm" && <MCDMAnalysis data={data} />}
-          </div>
+          </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid var(--border-subtle)", marginTop: 40 }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "16px 32px", display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)" }}>
-          <span>Kartik Joshi • Anurag Deverakonda • Nandana Santosh • Weiqi Liu • Advait Dalvi • Gautam Barai</span>
-          <span>Masters in AI with Business · Term 2 · RDMU · 2026</span>
-        </div>
+      <footer style={{ borderTop: "1px solid var(--border-subtle)", padding: "16px 28px", textAlign: "center" }}>
+        <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          MAIB {"\u00B7"} RDMU {"\u00B7"} Group 2 {"\u00B7"} Kartik Joshi, Anurag Deverakonda, Nandana Santosh, Weiqi Liu, Advait Dalvi, Gautam Barai
+        </p>
       </footer>
     </div>
   )

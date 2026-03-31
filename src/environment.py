@@ -51,7 +51,9 @@ class Intersection:
         q_ns = min(4, self.queue_ns // 5)  # 0-4 buckets
         q_ew = min(4, self.queue_ew // 5)
         phase = self.phase
-        return (q_ns, q_ew, phase)
+        # Neighbor pressure (set externally by environment)
+        neighbor_pressure = getattr(self, 'neighbor_pressure', 0)
+        return (q_ns, q_ew, phase, neighbor_pressure)
 
     def get_state_vector(self):
         """Return full state vector for detailed analysis."""
@@ -202,7 +204,26 @@ class TrafficEnvironment:
         return self._get_all_states()
 
     def _get_all_states(self):
-        """Get states for all intersections."""
+        """Get states for all intersections, including neighbor awareness."""
+        # First compute neighbor pressure for each intersection
+        for idx, inter in enumerate(self.intersections):
+            row, col = idx // self.GRID_SIZE, idx % self.GRID_SIZE
+            neighbor_queues = []
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = row + dr, col + dc
+                if 0 <= nr < self.GRID_SIZE and 0 <= nc < self.GRID_SIZE:
+                    nidx = nr * self.GRID_SIZE + nc
+                    n = self.intersections[nidx]
+                    neighbor_queues.append(n.queue_ns + n.queue_ew)
+            # Discretize neighbor pressure: 0=low, 1=medium, 2=high
+            avg_neighbor = np.mean(neighbor_queues) if neighbor_queues else 0
+            if avg_neighbor < 10:
+                inter.neighbor_pressure = 0
+            elif avg_neighbor < 25:
+                inter.neighbor_pressure = 1
+            else:
+                inter.neighbor_pressure = 2
+
         return [inter.get_state() for inter in self.intersections]
 
     def _get_traffic_volume(self, intersection_idx):
@@ -300,6 +321,10 @@ class TrafficEnvironment:
 
     def _process_intersection(self, idx, intersection, action):
         """Process a single intersection for one time step."""
+        # Record pre-step state for per-step reward calculation
+        pre_queue = intersection.queue_ns + intersection.queue_ew
+        pre_vehicles = intersection.total_vehicles_passed
+
         # Apply action
         if intersection.is_yellow:
             intersection.yellow_timer += 1
@@ -326,17 +351,19 @@ class TrafficEnvironment:
         intersection.queue_ew += ew_arrivals
 
         # Traffic departures (green phase serves vehicles)
+        step_served = 0
         if not intersection.is_yellow:
             if intersection.phase == 0:  # NS green
-                served_ns = min(intersection.queue_ns, np.random.randint(2, 6))
+                served_ns = min(intersection.queue_ns, np.random.randint(3, 7))
                 intersection.queue_ns -= served_ns
                 intersection.total_vehicles_passed += served_ns
-                # EW queue grows (red)
+                step_served = served_ns
                 intersection.total_stops += min(ew_arrivals, 3)
             else:  # EW green
-                served_ew = min(intersection.queue_ew, np.random.randint(2, 6))
+                served_ew = min(intersection.queue_ew, np.random.randint(3, 7))
                 intersection.queue_ew -= served_ew
                 intersection.total_vehicles_passed += served_ew
+                step_served = served_ew
                 intersection.total_stops += min(ns_arrivals, 3)
 
         # Update wait time
@@ -353,8 +380,10 @@ class TrafficEnvironment:
         if intersection.is_yellow:
             intersection.near_misses += np.random.binomial(1, 0.05)
 
-        # Calculate reward
-        reward = self._calculate_reward(intersection)
+        # Calculate reward using PER-STEP deltas (not cumulative)
+        post_queue = intersection.queue_ns + intersection.queue_ew
+        reward = self._calculate_reward(intersection, step_served, pre_queue,
+                                         post_queue, step_emissions)
 
         # Cap queues to prevent explosion
         intersection.queue_ns = min(intersection.queue_ns, 100)
@@ -362,25 +391,38 @@ class TrafficEnvironment:
 
         return reward
 
-    def _calculate_reward(self, intersection):
-        """Calculate reward for an intersection agent."""
-        # Negative reward for waiting vehicles
-        queue_penalty = -(intersection.queue_ns + intersection.queue_ew) * 0.1
+    def _calculate_reward(self, intersection, step_served, pre_queue,
+                          post_queue, step_emissions):
+        """
+        Calculate per-step reward for an intersection agent.
+        Uses only CURRENT step deltas — no cumulative metrics.
+        """
+        # 1. Queue reduction reward (core signal: did the action reduce congestion?)
+        queue_change = pre_queue - post_queue  # positive = queues shrunk = good
+        queue_reward = queue_change * 0.3
 
-        # Positive reward for throughput
-        throughput_reward = intersection.total_vehicles_passed * 0.05
+        # 2. Current queue penalty (prefer low queues)
+        queue_penalty = -post_queue * 0.05
 
-        # Emission penalty
-        emission_penalty = -intersection.total_emissions * 0.5
+        # 3. Per-step throughput reward (vehicles served THIS step)
+        throughput_reward = step_served * 0.4
 
-        # Safety penalty
-        safety_penalty = -intersection.near_misses * 2.0
+        # 4. Per-step emission penalty
+        emission_penalty = -step_emissions * 1.0
 
-        # Balance penalty (prefer balanced queues)
+        # 5. Queue balance reward (prefer balanced NS/EW queues)
         imbalance = abs(intersection.queue_ns - intersection.queue_ew)
-        balance_penalty = -imbalance * 0.05
+        balance_penalty = -imbalance * 0.08
 
-        reward = queue_penalty + throughput_reward + emission_penalty + safety_penalty + balance_penalty
+        # 6. Unnecessary switch penalty (discourage rapid flickering)
+        switch_penalty = 0.0
+        if intersection.is_yellow and intersection.yellow_timer == 1:
+            # Just started yellow — check if switch was premature
+            if intersection.phase_timer < 8:
+                switch_penalty = -0.5  # Penalize very short green phases
+
+        reward = (queue_reward + queue_penalty + throughput_reward +
+                  emission_penalty + balance_penalty + switch_penalty)
         return reward
 
     def _process_emergencies(self):
