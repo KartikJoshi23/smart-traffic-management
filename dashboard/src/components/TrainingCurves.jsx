@@ -1,13 +1,11 @@
 import { useState } from "react"
-import { TrendingUp } from "lucide-react"
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, Area, AreaChart,
-} from "recharts"
+import { TrendingUp, BookOpen } from "lucide-react"
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 
-const AGENT_COLORS = { fixed_timer: "#ef4444", q_learning: "#3b82f6", sarsa: "#10b981" }
+const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
-const SCENARIO_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const tooltipStyle = { background: "rgba(13,20,36,0.95)", border: "1px solid rgba(148,163,184,0.1)", borderRadius: 12, fontSize: 11 }
+const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
+const ttStyle = { background: "#0F1629", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 12, color: "#F1F5F9", fontSize: 11 }
 
 const METRICS = [
   { key: "episode_rewards", label: "Cumulative Reward" },
@@ -22,9 +20,9 @@ export default function TrainingCurves({ data }) {
   const [scenario, setScenario] = useState("normal")
   const [metric, setMetric] = useState("episode_rewards")
 
-  if (!training) return <p className="text-slate-500">No training data.</p>
+  if (!training) return <p style={{ color: "var(--text-label)" }}>No training data.</p>
   const scData = training[scenario]
-  if (!scData) return <p className="text-slate-500">No data for scenario.</p>
+  if (!scData) return <p style={{ color: "var(--text-label)" }}>No data for scenario.</p>
 
   const agents = Object.keys(scData)
   const numEp = scData[agents[0]]?.history?.[metric]?.length || 0
@@ -42,26 +40,26 @@ export default function TrainingCurves({ data }) {
   }))
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Selectors */}
-      <div className="glass rounded-2xl p-4 flex flex-wrap gap-4">
+      <div className="card card-compact" style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
         <div>
-          <label className="text-xs text-slate-500 block mb-1.5 font-medium uppercase tracking-wider">Scenario</label>
-          <div className="flex gap-1">
+          <div className="section-subtitle">Scenario</div>
+          <div style={{ display: "flex", gap: 6 }}>
             {Object.keys(training).map(sc => (
               <button key={sc} onClick={() => setScenario(sc)}
-                className={"btn btn-ghost text-xs " + (scenario === sc ? "active" : "")}>
-                {SCENARIO_LABELS[sc] || sc}
+                className={"btn btn-sm btn-outline " + (scenario === sc ? "active" : "")}>
+                {SC_LABELS[sc] || sc}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="text-xs text-slate-500 block mb-1.5 font-medium uppercase tracking-wider">Metric</label>
-          <div className="flex gap-1">
+          <div className="section-subtitle">Metric</div>
+          <div style={{ display: "flex", gap: 6 }}>
             {METRICS.map(m => (
               <button key={m.key} onClick={() => setMetric(m.key)}
-                className={"btn btn-ghost text-xs " + (metric === m.key ? "active" : "")}>
+                className={"btn btn-sm btn-outline " + (metric === m.key ? "active" : "")}>
                 {m.label}
               </button>
             ))}
@@ -70,76 +68,77 @@ export default function TrainingCurves({ data }) {
       </div>
 
       {/* Main Chart */}
-      <div className="glass rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp size={16} className="text-blue-400" />
-          <h2 className="text-sm font-semibold text-white">
-            {METRICS.find(m => m.key === metric)?.label} — {SCENARIO_LABELS[scenario]}
-          </h2>
-          <span className="text-xs text-slate-600 ml-auto">{numEp} episodes &middot; 200 steps each</span>
+      <div className="card">
+        <div className="section-title">
+          <TrendingUp size={16} style={{ color: "var(--blue)" }} />
+          {METRICS.find(m => m.key === metric)?.label} \u2014 {SC_LABELS[scenario]}
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{numEp} episodes \u00b7 200 steps each</span>
         </div>
         <ResponsiveContainer width="100%" height={380}>
           <AreaChart data={chartData}>
             <defs>
               {agents.map(ag => (
-                <linearGradient key={ag} id={"grad_" + ag} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={AGENT_COLORS[ag]} stopOpacity={0.2} />
+                <linearGradient key={ag} id={"tg_" + ag} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={AGENT_COLORS[ag]} stopOpacity={0.25} />
                   <stop offset="100%" stopColor={AGENT_COLORS[ag]} stopOpacity={0} />
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a2332" />
-            <XAxis dataKey="episode" stroke="#475569" tick={{ fontSize: 11 }} label={{ value: "Episode", position: "insideBottomRight", offset: -5, style: { fill: "#64748b", fontSize: 11 } }} />
-            <YAxis stroke="#475569" tick={{ fontSize: 11 }} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A2236" />
+            <XAxis dataKey="episode" stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 11 }}
+              label={{ value: "Episode", position: "insideBottomRight", offset: -5, style: { fill: "#64748B", fontSize: 11 } }} />
+            <YAxis stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 11 }} />
+            <Tooltip contentStyle={ttStyle} />
+            <Legend wrapperStyle={{ fontSize: 12, color: "#CBD5E1", paddingTop: 12 }} />
             {agents.map(ag => (
               <Area key={ag} type="monotone" dataKey={AGENT_LABELS[ag]}
-                stroke={AGENT_COLORS[ag]} strokeWidth={2} fill={"url(#grad_" + ag + ")"} dot={false} />
+                stroke={AGENT_COLORS[ag]} strokeWidth={2.5} fill={"url(#tg_" + ag + ")"} dot={false} />
             ))}
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
       {/* Epsilon Decay */}
-      <div className="glass rounded-2xl p-6">
-        <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+      <div className="card">
+        <div className="section-title">
+          <BookOpen size={16} style={{ color: "var(--purple)" }} />
           Exploration Rate (\u03b5) Decay
-          <span className="text-xs text-slate-600 font-normal ml-auto">\u03b5-greedy policy &middot; decay=0.995</span>
-        </h2>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>\u03b5-greedy \u00b7 decay = 0.995</span>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={epsilonData}>
             <defs>
-              <linearGradient id="epsGradQ" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+              <linearGradient id="epsGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a2332" />
-            <XAxis dataKey="episode" stroke="#475569" tick={{ fontSize: 10 }} />
-            <YAxis stroke="#475569" tick={{ fontSize: 10 }} domain={[0, 1]} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Area type="monotone" dataKey="Q-Learning" stroke="#3b82f6" fill="url(#epsGradQ)" strokeWidth={2} dot={false} />
-            <Area type="monotone" dataKey="SARSA" stroke="#10b981" fill="transparent" strokeWidth={2} dot={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1A2236" />
+            <XAxis dataKey="episode" stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 10 }} />
+            <YAxis stroke="#64748B" tick={{ fill: "#94A3B8", fontSize: 10 }} domain={[0, 1]} />
+            <Tooltip contentStyle={ttStyle} />
+            <Legend wrapperStyle={{ fontSize: 11, color: "#CBD5E1" }} />
+            <Area type="monotone" dataKey="Q-Learning" stroke="#3B82F6" fill="url(#epsGrad)" strokeWidth={2} dot={false} />
+            <Area type="monotone" dataKey="SARSA" stroke="#10B981" fill="transparent" strokeWidth={2} dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Final Performance Table */}
-      <div className="glass rounded-2xl p-6">
-        <h2 className="text-sm font-semibold text-white mb-4">
-          Converged Performance (Last 50 Episodes) — {SCENARIO_LABELS[scenario]}
-        </h2>
-        <table className="w-full text-sm text-left">
+      {/* Final Performance */}
+      <div className="card">
+        <div className="section-title">
+          <span className="dot" style={{ background: "var(--gold)" }} />
+          Converged Performance (Last 50 Episodes) \u2014 {SC_LABELS[scenario]}
+        </div>
+        <table className="data-table">
           <thead>
-            <tr className="border-b border-white/5 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="pb-3 pr-4 font-medium">Agent</th>
-              <th className="pb-3 pr-4 text-right font-medium">Avg Reward</th>
-              <th className="pb-3 pr-4 text-right font-medium">Throughput</th>
-              <th className="pb-3 pr-4 text-right font-medium">Wait Time</th>
-              <th className="pb-3 pr-4 text-right font-medium">Emissions</th>
-              <th className="pb-3 text-right font-medium">Safety</th>
+            <tr>
+              <th>Agent</th>
+              <th className="text-right">Avg Reward</th>
+              <th className="text-right">Throughput</th>
+              <th className="text-right">Wait Time</th>
+              <th className="text-right">Emissions</th>
+              <th className="text-right">Safety</th>
             </tr>
           </thead>
           <tbody>
@@ -147,18 +146,18 @@ export default function TrainingCurves({ data }) {
               const fm = scData[ag]?.final_metrics
               if (!fm) return null
               return (
-                <tr key={ag} className="border-b border-white/[0.03]">
-                  <td className="py-3 pr-4">
-                    <span className="inline-flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{background: AGENT_COLORS[ag]}} />
-                      <span className="text-slate-300 font-medium">{AGENT_LABELS[ag]}</span>
+                <tr key={ag}>
+                  <td>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: AGENT_COLORS[ag] }} />
+                      <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{AGENT_LABELS[ag]}</span>
                     </span>
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs text-slate-300">{fm.avg_reward?.toFixed(1)}</td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs text-slate-300">{fm.avg_throughput?.toFixed(1)}</td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs text-slate-300">{fm.avg_wait_time?.toFixed(1)}</td>
-                  <td className="py-3 pr-4 text-right font-mono text-xs text-slate-300">{fm.avg_emissions?.toFixed(4)}</td>
-                  <td className="py-3 text-right font-mono text-xs text-slate-300">{fm.avg_safety_score?.toFixed(1)}</td>
+                  <td className="text-right mono">{fm.avg_reward?.toFixed(1)}</td>
+                  <td className="text-right mono">{fm.avg_throughput?.toFixed(1)}</td>
+                  <td className="text-right mono">{fm.avg_wait_time?.toFixed(1)}</td>
+                  <td className="text-right mono">{fm.avg_emissions?.toFixed(4)}</td>
+                  <td className="text-right mono">{fm.avg_safety_score?.toFixed(1)}</td>
                 </tr>
               )
             })}

@@ -7,7 +7,7 @@ import ScenarioComparison from "./components/ScenarioComparison"
 import MCDMAnalysis from "./components/MCDMAnalysis"
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
   { id: "live", label: "Live Simulation", icon: Play },
   { id: "training", label: "Training Analysis", icon: TrendingUp },
   { id: "scenarios", label: "Scenario Comparison", icon: GitCompare },
@@ -32,82 +32,83 @@ export default function App() {
           try {
             const res = await fetch("/data/" + f + ".json")
             if (res.ok) results[f] = await res.json()
-          } catch { /* skip */ }
+          } catch { /* skip missing */ }
         }
         setData(results)
-      } finally {
-        setLoading(false)
-      }
+      } finally { setLoading(false) }
     }
     loadData()
   }, [])
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(180deg, #060b18 0%, #0a1228 50%, #060b18 100%)" }}>
+    <div className="min-h-screen" style={{ background: "var(--bg-page)" }}>
+      {/* Top accent line */}
+      <div style={{ height: 3, background: "linear-gradient(90deg, #06B6D4 0%, #3B82F6 40%, #8B5CF6 70%, #F59E0B 100%)" }} />
+
       {/* Header */}
-      <header className="relative overflow-hidden border-b border-white/5">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-cyan-500/5 to-purple-600/5" />
-        <div className="relative max-w-[1440px] mx-auto px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-cyan-500/20 border border-white/10 flex items-center justify-center text-lg">
+      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: "linear-gradient(135deg, var(--teal-dim), var(--blue-dim))",
+              border: "1px solid var(--border-medium)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 22
+            }}>
               🚦
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">
-                Smart City Traffic Management
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+                Dubai Smart Traffic Management
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Multi-Agent Reinforcement Learning &middot; WSM & TOPSIS &middot; Dubai 4&times;4 Grid
+              <p style={{ fontSize: 12, color: "var(--text-label)", marginTop: 2 }}>
+                Multi-Agent RL \u00b7 Q-Learning & SARSA \u00b7 WSM & TOPSIS Decision Analysis
               </p>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-live" />
-              <span className="text-xs text-emerald-400 font-medium">System Active</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div className="badge-green" style={{ gap: 6 }}>
+              <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />
+              System Online
             </div>
-            <span className="text-xs text-slate-600">Group 2 — MAIB RDMU</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>MAIB \u00b7 RDMU \u00b7 Group 2</span>
           </div>
         </div>
       </header>
 
-      {/* Tab Navigation */}
-      <nav className="border-b border-white/5 bg-white/[0.01]">
-        <div className="max-w-[1440px] mx-auto px-6">
-          <div className="flex gap-1 py-2 overflow-x-auto">
-            {TABS.map(t => {
-              const Icon = t.icon
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={"tab-pill flex items-center gap-2 whitespace-nowrap" + (tab === t.id ? " active" : "")}
-                >
-                  <Icon size={15} />
-                  {t.label}
-                </button>
-              )
-            })}
-          </div>
+      {/* Navigation */}
+      <nav style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "8px 32px", display: "flex", gap: 6, overflowX: "auto" }}>
+          {TABS.map(t => {
+            const Icon = t.icon
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={"nav-tab" + (tab === t.id ? " active" : "")}>
+                <Icon size={16} />
+                {t.label}
+              </button>
+            )
+          })}
         </div>
       </nav>
 
-      {/* Content */}
-      <main className="max-w-[1440px] mx-auto px-6 py-6">
+      {/* Main */}
+      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "24px 32px" }}>
         {loading ? (
-          <div className="text-center py-32">
-            <div className="inline-block w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4" />
-            <p className="text-slate-500 text-sm">Loading simulation data...</p>
+          <div style={{ textAlign: "center", padding: "120px 0" }}>
+            <div style={{ width: 36, height: 36, border: "3px solid var(--border-subtle)", borderTopColor: "var(--teal)", borderRadius: "50%", margin: "0 auto 16px" }} className="animate-spin" />
+            <p style={{ color: "var(--text-label)", fontSize: 14 }}>Loading simulation data...</p>
           </div>
         ) : !data.training_results ? (
-          <div className="text-center py-32">
-            <p className="text-slate-400 text-lg mb-2">No simulation data found</p>
-            <p className="text-slate-600 text-sm">
-              Run <code className="px-2 py-1 rounded bg-slate-800 text-cyan-400 text-xs">python main.py</code> to generate results
+          <div style={{ textAlign: "center", padding: "120px 0" }}>
+            <p style={{ color: "var(--text-secondary)", fontSize: 18, marginBottom: 8 }}>No simulation data found</p>
+            <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+              Run <code style={{ padding: "4px 10px", borderRadius: 8, background: "var(--bg-elevated)", color: "var(--teal)", fontSize: 13 }}>python main.py</code> to generate results
             </p>
           </div>
         ) : (
-          <div key={tab} className="fade-in">
+          <div key={tab} className="fade-up">
             {tab === "overview" && <Overview data={data} />}
             {tab === "live" && <LiveSimulation data={data} />}
             {tab === "training" && <TrainingCurves data={data} />}
@@ -118,10 +119,10 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 mt-8">
-        <div className="max-w-[1440px] mx-auto px-6 py-4 flex items-center justify-between text-xs text-slate-600">
-          <span>Kartik Joshi, Anurag Deverakonda, Nandana Santosh, Weiqi Liu, Advait Dalvi, Gautam Barai</span>
-          <span>MAIB &middot; Term 2 &middot; RDMU &middot; 2026</span>
+      <footer style={{ borderTop: "1px solid var(--border-subtle)", marginTop: 40 }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "16px 32px", display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)" }}>
+          <span>Kartik Joshi \u2022 Anurag Deverakonda \u2022 Nandana Santosh \u2022 Weiqi Liu \u2022 Advait Dalvi \u2022 Gautam Barai</span>
+          <span>Masters in AI with Business \u00b7 Term 2 \u00b7 RDMU \u00b7 2026</span>
         </div>
       </footer>
     </div>
