@@ -1,0 +1,207 @@
+{
+  "normal": {
+    "label": "Normal Traffic",
+    "agents": {
+      "fixed_timer": {
+        "label": "Fixed Timer",
+        "metrics": {
+          "avg_reward": 11778.85,
+          "avg_wait_time": 2677.1,
+          "avg_throughput": 5385.46,
+          "avg_queue": 10.39,
+          "avg_emissions": 85.6672,
+          "avg_safety_score": 81.95,
+          "total_episodes": 300
+        }
+      },
+      "q_learning": {
+        "label": "Q-Learning",
+        "metrics": {
+          "avg_reward": 10693.1,
+          "avg_wait_time": 2866.45,
+          "avg_throughput": 5265.88,
+          "avg_queue": 12.45,
+          "avg_emissions": 91.7263,
+          "avg_safety_score": 81.91,
+          "total_episodes": 300
+        }
+      },
+      "sarsa": {
+        "label": "SARSA",
+        "metrics": {
+          "avg_reward": 10990.58,
+          "avg_wait_time": 2901.06,
+          "avg_throughput": 5340.92,
+          "avg_queue": 12.54,
+          "avg_emissions": 92.8339,
+          "avg_safety_score": 81.95,
+          "total_episodes": 300
+        }
+      }
+    }
+  },
+  "rush_hour": {
+    "label": "Rush Hour (2.5x)",
+    "agents": {
+      "fixed_timer": {
+        "label": "Fixed Timer",
+        "metrics": {
+          "avg_reward": -56147.32,
+          "avg_wait_time": 31152.38,
+          "avg_throughput": 8904.92,
+          "avg_queue": 186.85,
+          "avg_emissions": 996.8761,
+          "avg_safety_score": 73.8,
+          "total_episodes": 300
+        }
+      },
+      "q_learning": {
+        "label": "Q-Learning",
+        "metrics": {
+          "avg_reward": -48344.43,
+          "avg_wait_time": 29040.46,
+          "avg_throughput": 9276.18,
+          "avg_queue": 174.94,
+          "avg_emissions": 929.2948,
+          "avg_safety_score": 74.74,
+          "total_episodes": 300
+        }
+      },
+      "sarsa": {
+        "label": "SARSA",
+        "metrics": {
+          "avg_reward": -50041.59,
+          "avg_wait_time": 29521.77,
+          "avg_throughput": 9295.66,
+          "avg_queue": 176.18,
+          "avg_emissions": 944.6966,
+          "avg_safety_score": 74.19,
+          "total_episodes": 300
+        }
+      }
+    }
+  },
+  "incident": {
+    "label": "Incident / Lane Closure",
+    "agents": {
+      "fixed_timer": {
+        "label": "Fixed Timer",
+        "metrics": {
+          "avg_reward": -12078.8,
+          "avg_wait_time": 14316.3,
+          "avg_throughput": 7928.44,
+          "avg_queue": 87.01,
+          "avg_emissions": 458.1216,
+          "avg_safety_score": 79.61,
+          "total_episodes": 300
+        }
+      },
+      "q_learning": {
+        "label": "Q-Learning",
+        "metrics": {
+          "avg_reward": -7761.36,
+          "avg_wait_time": 12947.84,
+          "avg_throughput": 8106.06,
+          "avg_queue": 76.1,
+          "avg_emissions": 414.3308,
+          "avg_safety_score": 79.9,
+          "total_episodes": 300
+        }
+      },
+      "sarsa": {
+        "label": "SARSA",
+        "metrics": {
+          "avg_reward": -6267.1,
+          "avg_wait_time": 12495.74,
+          "avg_throughput": 8022.02,
+          "avg_queue": 73.25,
+          "avg_emissions": 399.8638,
+          "avg_safety_score": 80.28,
+          "total_episodes": 300
+        }
+      }
+    }
+  },
+  "event": {
+    "label": "Event Traffic",
+    "agents": {
+      "fixed_timer": {
+        "label": "Fixed Timer",
+        "metrics": {
+          "avg_reward": 1430.95,
+          "avg_wait_time": 8719.66,
+          "avg_throughput": 7183.12,
+          "avg_queue": 42.73,
+          "avg_emissions": 279.0292,
+          "avg_safety_score": 80.27,
+          "total_episodes": 300
+        }
+      },
+      "q_learning": {
+        "label": "Q-Learning",
+        "metrics": {
+          "avg_reward": 1140.81,
+          "avg_wait_time": 8787.13,
+          "avg_throughput": 7180.0,
+          "avg_queue": 45.35,
+          "avg_emissions": 281.1882,
+          "avg_safety_score": 79.95,
+          "total_episodes": 300
+        }
+      },
+      "sarsa": {
+        "label": "SARSA",
+        "metrics": {
+          "avg_reward": 663.63,
+          "avg_wait_time": 9197.23,
+          "avg_throughput": 7312.58,
+          "avg_queue": 48.01,
+          "avg_emissions": 294.3112,
+          "avg_safety_score": 80.04,
+          "total_episodes": 300
+        }
+      }
+    }
+  },
+  "bus_priority": {
+    "label": "Bus Priority Mode",
+    "agents": {
+      "fixed_timer": {
+        "label": "Fixed Timer",
+        "metrics": {
+          "avg_reward": 11866.4,
+          "avg_wait_time": 4508.72,
+          "avg_throughput": 6600.76,
+          "avg_queue": 17.4,
+          "avg_emissions": 144.2792,
+          "avg_safety_score": 81.95,
+          "total_episodes": 300
+        }
+      },
+      "q_learning": {
+        "label": "Q-Learning",
+        "metrics": {
+          "avg_reward": 13424.84,
+          "avg_wait_time": 4285.1,
+          "avg_throughput": 6634.18,
+          "avg_queue": 18.09,
+          "avg_emissions": 137.1231,
+          "avg_safety_score": 82.02,
+          "total_episodes": 300
+        }
+      },
+      "sarsa": {
+        "label": "SARSA",
+        "metrics": {
+          "avg_reward": 12576.26,
+          "avg_wait_time": 4348.98,
+          "avg_throughput": 6576.92,
+          "avg_queue": 18.22,
+          "avg_emissions": 139.1672,
+          "avg_safety_score": 81.86,
+          "total_episodes": 300
+        }
+      }
+    }
+  }
+}

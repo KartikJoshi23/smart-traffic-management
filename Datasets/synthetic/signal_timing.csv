@@ -1,0 +1,145 @@
+intersection_id,intersection_name,time_period,time_range,ns_green_duration_sec,ew_green_duration_sec,yellow_duration_sec,total_cycle_length_sec,pedestrian_phase_sec,left_turn_phase_sec
+INT-01,Al Rigga - Salahuddin,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-01,Al Rigga - Salahuddin,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-01,Al Rigga - Salahuddin,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-01,Al Rigga - Salahuddin,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-01,Al Rigga - Salahuddin,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-01,Al Rigga - Salahuddin,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-01,Al Rigga - Salahuddin,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-01,Al Rigga - Salahuddin,Evening,20:00-22:00,35,30,5,75,15,10
+INT-01,Al Rigga - Salahuddin,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-02,Deira City Centre,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-02,Deira City Centre,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-02,Deira City Centre,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-02,Deira City Centre,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-02,Deira City Centre,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-02,Deira City Centre,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-02,Deira City Centre,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-02,Deira City Centre,Evening,20:00-22:00,35,30,5,75,15,10
+INT-02,Deira City Centre,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-03,Al Maktoum Bridge,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-03,Al Maktoum Bridge,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-03,Al Maktoum Bridge,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-03,Al Maktoum Bridge,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-03,Al Maktoum Bridge,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-03,Al Maktoum Bridge,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-03,Al Maktoum Bridge,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-03,Al Maktoum Bridge,Evening,20:00-22:00,35,30,5,75,15,10
+INT-03,Al Maktoum Bridge,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Evening,20:00-22:00,35,30,5,75,15,10
+INT-04,Bur Dubai - Khalid Bin Waleed,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Evening,20:00-22:00,35,30,5,75,15,10
+INT-05,Sheikh Zayed Rd - Interchange 1,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-06,DIFC - Gate Avenue,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-06,DIFC - Gate Avenue,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-06,DIFC - Gate Avenue,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-06,DIFC - Gate Avenue,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-06,DIFC - Gate Avenue,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-06,DIFC - Gate Avenue,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-06,DIFC - Gate Avenue,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-06,DIFC - Gate Avenue,Evening,20:00-22:00,35,30,5,75,15,10
+INT-06,DIFC - Gate Avenue,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-07,Business Bay - Marasi Dr,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-07,Business Bay - Marasi Dr,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-07,Business Bay - Marasi Dr,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-07,Business Bay - Marasi Dr,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-07,Business Bay - Marasi Dr,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-07,Business Bay - Marasi Dr,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-07,Business Bay - Marasi Dr,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-07,Business Bay - Marasi Dr,Evening,20:00-22:00,35,30,5,75,15,10
+INT-07,Business Bay - Marasi Dr,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-08,Dubai Mall Junction,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-08,Dubai Mall Junction,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-08,Dubai Mall Junction,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-08,Dubai Mall Junction,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-08,Dubai Mall Junction,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-08,Dubai Mall Junction,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-08,Dubai Mall Junction,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-08,Dubai Mall Junction,Evening,20:00-22:00,35,30,5,75,15,10
+INT-08,Dubai Mall Junction,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-09,Al Quoz Industrial,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-09,Al Quoz Industrial,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-09,Al Quoz Industrial,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-09,Al Quoz Industrial,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-09,Al Quoz Industrial,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-09,Al Quoz Industrial,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-09,Al Quoz Industrial,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-09,Al Quoz Industrial,Evening,20:00-22:00,35,30,5,75,15,10
+INT-09,Al Quoz Industrial,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-10,Jumeirah Beach Rd,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-10,Jumeirah Beach Rd,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-10,Jumeirah Beach Rd,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-10,Jumeirah Beach Rd,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-10,Jumeirah Beach Rd,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-10,Jumeirah Beach Rd,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-10,Jumeirah Beach Rd,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-10,Jumeirah Beach Rd,Evening,20:00-22:00,35,30,5,75,15,10
+INT-10,Jumeirah Beach Rd,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-11,Palm Jumeirah Tunnel,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-11,Palm Jumeirah Tunnel,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-11,Palm Jumeirah Tunnel,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-11,Palm Jumeirah Tunnel,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-11,Palm Jumeirah Tunnel,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-11,Palm Jumeirah Tunnel,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-11,Palm Jumeirah Tunnel,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-11,Palm Jumeirah Tunnel,Evening,20:00-22:00,35,30,5,75,15,10
+INT-11,Palm Jumeirah Tunnel,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-12,Marina Walk - JBR,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-12,Marina Walk - JBR,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-12,Marina Walk - JBR,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-12,Marina Walk - JBR,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-12,Marina Walk - JBR,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-12,Marina Walk - JBR,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-12,Marina Walk - JBR,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-12,Marina Walk - JBR,Evening,20:00-22:00,35,30,5,75,15,10
+INT-12,Marina Walk - JBR,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-13,DIP - Al Asayel St,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-13,DIP - Al Asayel St,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-13,DIP - Al Asayel St,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-13,DIP - Al Asayel St,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-13,DIP - Al Asayel St,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-13,DIP - Al Asayel St,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-13,DIP - Al Asayel St,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-13,DIP - Al Asayel St,Evening,20:00-22:00,35,30,5,75,15,10
+INT-13,DIP - Al Asayel St,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-14,Academic City Roundabout,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-14,Academic City Roundabout,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-14,Academic City Roundabout,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-14,Academic City Roundabout,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-14,Academic City Roundabout,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-14,Academic City Roundabout,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-14,Academic City Roundabout,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-14,Academic City Roundabout,Evening,20:00-22:00,35,30,5,75,15,10
+INT-14,Academic City Roundabout,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-15,Hessa Street - Al Barsha,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-15,Hessa Street - Al Barsha,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-15,Hessa Street - Al Barsha,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-15,Hessa Street - Al Barsha,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-15,Hessa Street - Al Barsha,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-15,Hessa Street - Al Barsha,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-15,Hessa Street - Al Barsha,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-15,Hessa Street - Al Barsha,Evening,20:00-22:00,35,30,5,75,15,10
+INT-15,Hessa Street - Al Barsha,Late Night,22:00-00:00,30,30,5,70,15,10
+INT-16,Dubai Airport - Terminal 3,Off-Peak Night,00:00-06:00,30,30,5,70,15,10
+INT-16,Dubai Airport - Terminal 3,Morning Pre-Rush,06:00-07:00,35,25,5,70,15,10
+INT-16,Dubai Airport - Terminal 3,Morning Rush,07:00-09:00,45,30,5,85,15,10
+INT-16,Dubai Airport - Terminal 3,Mid-Morning,09:00-12:00,35,30,5,75,15,10
+INT-16,Dubai Airport - Terminal 3,Lunch,12:00-14:00,35,35,5,80,15,10
+INT-16,Dubai Airport - Terminal 3,Afternoon,14:00-17:00,35,30,5,75,15,10
+INT-16,Dubai Airport - Terminal 3,Evening Rush,17:00-20:00,45,30,5,85,15,10
+INT-16,Dubai Airport - Terminal 3,Evening,20:00-22:00,35,30,5,75,15,10
+INT-16,Dubai Airport - Terminal 3,Late Night,22:00-00:00,30,30,5,70,15,10

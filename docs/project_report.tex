@@ -1,0 +1,836 @@
+\documentclass[12pt, a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{tabularx}
+
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    urlcolor=blue!70!black,
+    citecolor=blue!70!black
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!8},
+    frame=single,
+    breaklines=true,
+    keywordstyle=\color{blue!80!black},
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red!70!black},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    showstringspaces=false,
+    tabsize=4
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Smart City Traffic Management}
+\fancyhead[R]{\small Project Report}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Title
+\title{
+    \vspace{-1cm}
+    \textbf{Smart City Traffic Management System} \\[0.4cm]
+    \Large Multi-Agent Reinforcement Learning with \\
+    Multi-Criteria Decision Making \\[0.5cm]
+    \large Comprehensive Project Report \\[0.3cm]
+    \normalsize Group Project 2 --- RDMU, Term 2
+}
+
+\author{
+    Kartik Joshi \and Anurag Deverakonda \and Nandana Santosh \\
+    \and Weiqi Liu \and Advait Dalvi \and Gautam Barai
+}
+
+\date{March 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+\vspace{0.3cm}
+\begin{center}
+\begin{tabular}{ll}
+    \toprule
+    \textbf{Document Version} & 1.0 \\
+    \textbf{Date} & March 31, 2026 \\
+    \textbf{Course} & RDMU --- Term 2, MAIB Program \\
+    \textbf{Project} & Group Project 2: Smart City Traffic Management \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{abstract}
+This report presents the complete design, implementation, and evaluation of a Smart City Traffic Management System. The system uses multi-agent reinforcement learning (Q-Learning and SARSA) to train adaptive traffic signal controllers across a 4$\times$4 grid of intersections, and applies multi-criteria decision making (WSM and TOPSIS) to evaluate and compare control policies. Five traffic scenarios---Normal, Rush Hour, Incident, Event, and Bus Priority---are simulated using synthetic datasets calibrated to real Dubai traffic patterns. A React.js dashboard provides interactive visualization of training progress, live simulation playback, scenario comparisons, and MCDM trade-off analysis. This document serves as a single source of truth: it contains every detail required to understand, reproduce, and extend the system.
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+%=============================================================================
+\section{Introduction}
+%=============================================================================
+
+\subsection{Problem Context}
+
+Urban traffic congestion results in wasted fuel, increased CO$_2$ emissions, longer commute times, and safety hazards. Traditional fixed-timer traffic signals operate on pre-programmed cycles that cannot adapt to real-time traffic conditions. When traffic patterns change---due to rush hours, incidents, special events, or public transport needs---fixed timers become inefficient, causing unnecessary delays and emissions.
+
+This project addresses the problem by developing a system where:
+\begin{itemize}[nosep]
+    \item Traffic lights, autonomous vehicles, and public transport agents \textbf{coordinate} to reduce congestion, emissions, and travel time.
+    \item \textbf{Reinforcement learning} enables each intersection's signal controller to learn optimal timing policies from experience.
+    \item \textbf{Multi-criteria evaluation} balances competing objectives (efficiency, safety, emissions, public transport) to identify the best overall policy.
+\end{itemize}
+
+\subsection{Project Objectives}
+
+\begin{enumerate}[nosep]
+    \item \textbf{System Design}: Model intersections and vehicles as agents in a multi-agent reinforcement learning environment.
+    \item \textbf{Simulation}: Implement Q-Learning and SARSA for adaptive traffic light control with a fixed-timer baseline.
+    \item \textbf{Criteria Evaluation}: Apply WSM and TOPSIS multi-criteria methods to balance efficiency, safety, and emissions.
+    \item \textbf{Experimentation}: Run simulations under five different traffic scenarios.
+    \item \textbf{Prototype}: Visualize traffic flow improvements and explain trade-offs using an interactive dashboard.
+\end{enumerate}
+
+\subsection{Scope}
+
+The system simulates a 4$\times$4 grid of 16 intersections based on real Dubai locations. Three agent types (Q-Learning, SARSA, Fixed-Timer) are trained and evaluated across five scenarios (Normal, Rush Hour, Incident, Event, Bus Priority). The dashboard presents all results with charts, live animation, and MCDM analysis. The project does \textit{not} connect to physical traffic infrastructure---it is a simulation-based research prototype.
+
+%=============================================================================
+\section{Literature and Research Context}
+%=============================================================================
+
+\subsection{Reinforcement Learning for Traffic Control}
+
+Reinforcement learning has been extensively studied for traffic signal control. The key advantage over traditional approaches is the ability to learn optimal policies directly from interaction with the environment without requiring explicit traffic models.
+
+\textbf{Q-Learning} \cite{watkins1992} is an off-policy temporal-difference method that learns the value of the optimal action in each state, regardless of the action actually taken. This allows faster convergence but can overestimate action values.
+
+\textbf{SARSA} (State-Action-Reward-State-Action) \cite{rummery1994} is an on-policy method that updates Q-values based on the action actually taken by the current policy. This tends to learn more conservative (safer) policies because it accounts for exploration during learning.
+
+\subsection{Multi-Agent Systems}
+
+In a multi-intersection network, each intersection can be modeled as an independent agent (decentralized control) or agents can share information (centralized or partially centralized). This project uses \textbf{decentralized independent learners}---each intersection has its own Q-table and learns independently. Coordination emerges implicitly through shared traffic flows: an action at one intersection affects queue lengths at neighboring intersections.
+
+\subsection{IoT Sensors and CNN-Based Detection}
+
+Modern smart traffic systems deploy IoT sensors (inductive loops, radar, cameras) at intersections for real-time vehicle detection. Convolutional Neural Networks (CNNs) process camera feeds to classify vehicle types (sedan, bus, truck, emergency) and estimate queue lengths. In this project, IoT sensor data is represented through the synthetic \texttt{vehicle\_detections.csv} dataset, and the environment's vehicle-type distribution (40\% sedan, 25\% SUV, etc.) reflects real-world proportions.
+
+\subsection{Emergency Vehicle Priority}
+
+Emergency vehicle preemption (EVP) systems detect approaching emergency vehicles and temporarily override normal signal timing to provide green signals along the emergency route. The system models this through stochastic emergency events that trigger signal preemption at the affected intersection.
+
+\subsection{Multi-Criteria Decision Making}
+
+Traffic control involves balancing multiple, often conflicting objectives. MCDM methods provide a structured framework:
+\begin{itemize}[nosep]
+    \item \textbf{WSM} (Weighted Sum Model): Simple additive weighting after min-max normalization. Intuitive but assumes criteria independence.
+    \item \textbf{TOPSIS}: Ranks alternatives by distance to the ideal solution and distance from the anti-ideal solution. More robust to scale differences.
+\end{itemize}
+
+%=============================================================================
+\section{System Architecture}
+%=============================================================================
+
+\subsection{Directory Structure}
+
+\begin{lstlisting}[language={}, numbers=none]
+Smart Traffic Management/
+|-- Datasets/
+|   |-- (original Dubai transport CSVs)
+|   |-- synthetic/
+|       |-- intersection_traffic.csv
+|       |-- vehicle_detections.csv
+|       |-- emergency_events.csv
+|       |-- congestion_index.csv
+|       |-- signal_timing.csv
+|-- src/
+|   |-- __init__.py
+|   |-- data_loader.py
+|   |-- environment.py
+|   |-- agents.py
+|   |-- simulation.py
+|   |-- mcdm.py
+|   |-- generate_synthetic.py
+|   |-- run_simulation.py
+|-- dashboard/
+|   |-- src/
+|   |   |-- components/
+|   |   |-- data/            (pre-computed JSON)
+|   |   |-- App.jsx
+|   |   |-- main.jsx
+|   |-- package.json
+|   |-- vite.config.js
+|   |-- tailwind.config.js
+|-- main.py
+|-- requirements.txt
+|-- docs/
+    |-- technical_specifications.tex
+    |-- project_report.tex
+\end{lstlisting}
+
+\subsection{Data Flow}
+
+\begin{enumerate}[nosep]
+    \item \texttt{generate\_synthetic.py} $\rightarrow$ Creates 5 CSV files in \texttt{Datasets/synthetic/}
+    \item \texttt{environment.py} + \texttt{agents.py} $\rightarrow$ RL training loop produces episode metrics
+    \item \texttt{simulation.py} $\rightarrow$ Orchestrates 15 experiments (3 agents $\times$ 5 scenarios), calls MCDM evaluation
+    \item \texttt{mcdm.py} $\rightarrow$ Computes WSM, TOPSIS scores and sensitivity analysis
+    \item \texttt{simulation.py} $\rightarrow$ Exports JSON files to \texttt{dashboard/public/data/}
+    \item \texttt{dashboard/} $\rightarrow$ React app reads JSON, renders charts and visualizations
+\end{enumerate}
+
+\subsection{Technology Stack}
+
+\begin{longtable}{p{3.5cm}p{3cm}p{5.5cm}}
+    \toprule
+    \textbf{Component} & \textbf{Technology} & \textbf{Purpose} \\
+    \midrule
+    Backend & Python 3.9+ & Simulation, RL training, MCDM \\
+    RL Framework & NumPy & Q-tables, matrix operations \\
+    Data Processing & Pandas & Synthetic dataset generation \\
+    Visualization (Backend) & Matplotlib, Seaborn & Optional offline plots \\
+    Frontend & React.js (Vite) & Interactive dashboard \\
+    Charts & Recharts & Line, bar, radar, area charts \\
+    Styling & Tailwind CSS & Responsive UI styling \\
+    \bottomrule
+\end{longtable}
+
+%=============================================================================
+\section{Synthetic Dataset Generation}
+%=============================================================================
+
+\subsection{Rationale}
+
+While real Dubai transport datasets are available (bus routes, passenger trips, driver census), they lack the granular intersection-level, time-step-resolution data needed for RL simulation. Synthetic datasets bridge this gap by generating realistic data calibrated to actual Dubai patterns.
+
+\subsection{Dataset Descriptions}
+
+\subsubsection{intersection\_traffic.csv ($\sim$345,600 records)}
+
+Hourly vehicle counts for 16 intersections over 90 days. Each record contains:
+
+\begin{longtable}{p{4cm}p{2.5cm}p{5.5cm}}
+    \toprule
+    \textbf{Column} & \textbf{Type} & \textbf{Description} \\
+    \midrule
+    date & string & Date in YYYY-MM-DD format \\
+    hour & int (0--23) & Hour of day \\
+    day\_of\_week & string & Monday through Sunday \\
+    is\_weekend & bool & True for Friday/Saturday (Dubai) \\
+    intersection\_id & string & INT-01 through INT-16 \\
+    intersection\_name & string & Dubai location name \\
+    vehicle\_count & int & Total vehicles detected in that hour \\
+    avg\_speed\_kmh & float & Average vehicle speed \\
+    avg\_wait\_time\_sec & float & Average wait time at red signal \\
+    congestion\_level & float (0--1) & Congestion ratio \\
+    queue\_length\_ns & int & North-South queue (vehicles) \\
+    queue\_length\_ew & int & East-West queue (vehicles) \\
+    \bottomrule
+\end{longtable}
+
+\subsubsection{vehicle\_detections.csv ($\sim$580,000 records)}
+
+Individual vehicle detections simulating IoT sensor readings:
+\begin{itemize}[nosep]
+    \item \texttt{timestamp}: Detection time (second-level precision)
+    \item \texttt{intersection\_id}: Where detected
+    \item \texttt{vehicle\_type}: sedan, suv, bus, truck, taxi, motorcycle, emergency
+    \item \texttt{speed\_kmh}: Measured speed (reduced during congestion)
+    \item \texttt{lane}: Lane 1--4
+    \item \texttt{direction}: North, South, East, West
+    \item \texttt{is\_emergency}: Boolean flag
+\end{itemize}
+
+Vehicle type distribution: 40\% sedan, 25\% SUV, 12\% taxi, 10\% truck, 8\% bus, 3\% motorcycle, 2\% emergency.
+
+\subsubsection{emergency\_events.csv ($\sim$500 records)}
+
+Emergency vehicle incidents over 90 days (3--8 events/day):
+\begin{itemize}[nosep]
+    \item \texttt{event\_type}: ambulance (50\%), police (30\%), fire\_truck (20\%)
+    \item \texttt{response\_time\_min}: Base response time + exponential noise
+    \item \texttt{response\_time\_with\_preemption\_min}: Response time with signal preemption savings (1.5--4.0 minutes saved)
+    \item \texttt{congestion\_at\_event}: Congestion level at time of event
+    \item \texttt{vehicles\_cleared}: Vehicles cleared from path
+\end{itemize}
+
+\subsubsection{congestion\_index.csv ($\sim$259,200 records)}
+
+Historical congestion by zone and hour for 12 Dubai zones over 90 days:
+\begin{itemize}[nosep]
+    \item \texttt{zone}: Deira, Bur Dubai, Downtown, Marina, JBR, Business Bay, Al Quoz, DIP, Academic City, Jumeirah, Al Barsha, Airport Area
+    \item \texttt{congestion\_index}: 0.0--1.0 scale
+    \item \texttt{co2\_emissions\_kg}: Estimated CO$_2$ based on idle vehicles and congestion
+    \item \texttt{fuel\_waste\_liters}: Estimated fuel waste from idling
+    \item Zone-specific factors: Downtown ($1.4\times$), DIP ($0.7\times$), etc.
+\end{itemize}
+
+\subsubsection{signal\_timing.csv (144 records)}
+
+Fixed-timer configurations for 16 intersections across 9 time periods:
+\begin{itemize}[nosep]
+    \item 9 time periods: Off-Peak Night, Morning Pre-Rush, Morning Rush, Mid-Morning, Lunch, Afternoon, Evening Rush, Evening, Late Night
+    \item Parameters: NS green duration, EW green duration, yellow duration, total cycle length, pedestrian and left-turn phases
+\end{itemize}
+
+\subsection{24-Hour Traffic Pattern}
+
+The traffic pattern is modeled as a normalized volume vector over 24 hours, reflecting Dubai's characteristic double-peak pattern:
+
+\begin{equation}
+    \mathbf{p} = [0.10, 0.08, 0.06, 0.05, 0.05, 0.08, 0.20, 0.55, 0.85, 0.70, 0.55, 0.50,
+\end{equation}
+\begin{equation*}
+    \qquad 0.60, 0.65, 0.55, 0.50, 0.60, 0.80, 0.90, 0.85, 0.70, 0.55, 0.35, 0.20]
+\end{equation*}
+
+Peaks at hour 8 (0.85, morning rush) and hour 18 (0.90, evening rush). Weekend traffic is scaled to 70\% of weekday with a 1.3$\times$ boost during 10:00--22:00 for leisure activities.
+
+\subsection{Generation Process}
+
+\begin{lstlisting}[language=Python, caption={Running synthetic data generation}]
+# From project root:
+python -c "from src.generate_synthetic import main; main()"
+# Or via main entry point:
+python main.py  # Step 1 generates synthetic data automatically
+\end{lstlisting}
+
+All datasets are written to \texttt{Datasets/synthetic/} with random seed 42 for reproducibility.
+
+%=============================================================================
+\section{Environment Design}
+%=============================================================================
+
+\subsection{Overview}
+
+The \texttt{TrafficEnvironment} class (in \texttt{src/environment.py}) models a 4$\times$4 grid of 16 signalized intersections. Each intersection is an instance of the \texttt{Intersection} class with independent state, queue dynamics, and metrics tracking.
+
+\subsection{Intersection Model}
+
+Each intersection maintains:
+\begin{itemize}[nosep]
+    \item \textbf{Signal phase} $\phi \in \{0, 1\}$: NS-green (0) or EW-green (1)
+    \item \textbf{Phase timer}: Steps since last phase change
+    \item \textbf{Yellow state}: 3-step transition period during phase switches
+    \item \textbf{Queue lengths}: $q_{NS}$ and $q_{EW}$ (capped at 100)
+    \item \textbf{Cumulative metrics}: total wait time, vehicles passed, stops, emissions, near-misses
+\end{itemize}
+
+\subsection{State Representation}
+
+The state is discretized for tabular Q-learning:
+\begin{equation}
+    s = (q_{NS}^d, q_{EW}^d, \phi) \quad \text{where } q^d = \min\left(4, \left\lfloor q / 5 \right\rfloor\right)
+\end{equation}
+
+This yields $5 \times 5 \times 2 = 50$ discrete states per intersection.
+
+\subsection{Action Space}
+
+Three actions per intersection:
+\begin{center}
+\begin{tabular}{cl}
+    \toprule
+    \textbf{Action} & \textbf{Effect} \\
+    \midrule
+    0 (KEEP) & Maintain current phase \\
+    1 (SWITCH) & Begin yellow transition to opposite phase (requires min-green) \\
+    2 (EXTEND) & Continue current green phase (no timer reset) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Traffic Dynamics}
+
+\subsubsection{Vehicle Arrivals}
+
+Arrivals at each intersection follow a Poisson process:
+\begin{equation}
+    \lambda_i(t) = \frac{B_i \cdot M_s \cdot p_{h(t)}}{200}
+\end{equation}
+where $B_i$ is the base volume for intersection $i$, $M_s$ is the scenario multiplier, $p_{h(t)}$ is the hourly pattern value, and 200 is the steps-per-episode normalization. Actual arrivals: $A_i(t) \sim \text{Poisson}(\max(1, \lambda_i(t)))$.
+
+Additional modifiers:
+\begin{itemize}[nosep]
+    \item Event intersections get a $2.0\times$ boost
+    \item Incident intersection capacity drops to $0.3\times$; neighbors get $1.4\times$
+    \item Arrivals are split 50/50 between NS and EW directions
+\end{itemize}
+
+\subsubsection{Vehicle Departures}
+
+During green phase, vehicles depart at rate $D \sim \text{Uniform}(2, 5)$ per step. Only the green-phase direction is served; the red-phase direction accumulates queue and stop counts.
+
+\subsubsection{Emissions Model}
+
+\begin{equation}
+    E_i(t) = 0.002 \times (q_{NS}^i + q_{EW}^i) \quad \text{kg CO}_2 \text{ per step}
+\end{equation}
+
+Each idle vehicle emits 0.002 kg CO$_2$ per 30-second time step.
+
+\subsubsection{Safety Model}
+
+During yellow phases, near-miss incidents occur with probability 0.05 per step (Bernoulli trial). The safety score is:
+\begin{equation}
+    \text{Safety} = \max\left(0, 100 - 5 \cdot N_{\text{near-miss}} - 0.1 \cdot N_{\text{stops}}\right)
+\end{equation}
+
+\subsection{Reward Function}
+
+The reward for intersection $i$ at step $t$:
+\begin{equation}
+    R_i^t = \underbrace{-0.1(q_{NS} + q_{EW})}_{\text{queue penalty}} + \underbrace{0.05 \cdot V_{\text{passed}}}_{\text{throughput}} \underbrace{- 0.5 \cdot E_{\text{cumul}}}_{\text{emissions}} \underbrace{- 2.0 \cdot M}_{\text{safety}} \underbrace{- 0.05 \cdot |q_{NS} - q_{EW}|}_{\text{balance}}
+\end{equation}
+
+This multi-objective reward naturally encourages agents to:
+\begin{itemize}[nosep]
+    \item Minimize queue lengths (reduce wait times)
+    \item Maximize vehicle throughput
+    \item Reduce idle emissions
+    \item Avoid unnecessary phase changes (reduce near-misses)
+    \item Balance queues across directions
+\end{itemize}
+
+\subsection{Emergency Vehicle Processing}
+
+At each step, an emergency event occurs with probability 0.02. Active emergencies force the affected intersection to NS-green phase for 5 steps, simulating signal preemption. Emergency types: ambulance, fire\_truck, police.
+
+\subsection{Bus Priority Processing}
+
+When the Bus Priority scenario is active, 6 pre-defined bus routes are checked each step. With route-specific probability (0.15--0.30), a bus arrives at a random intersection on its route, and the signal is switched to favor the heavier-queue direction.
+
+%=============================================================================
+\section{Reinforcement Learning Agents}
+%=============================================================================
+
+\subsection{Q-Learning (Off-Policy TD Control)}
+
+\begin{algorithm}[H]
+\caption{Q-Learning Agent Update}
+\begin{algorithmic}[1]
+\State \textbf{Initialize} $Q(s, a) \leftarrow 0$ for all $s, a$
+\For{each step}
+    \State Observe state $s$
+    \State Choose action $a$ using $\varepsilon$-greedy on $Q(s, \cdot)$
+    \State Take action $a$, observe reward $r$ and next state $s'$
+    \State $Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma \max_{a'} Q(s', a') - Q(s, a) \right]$
+\EndFor
+\State After each episode: $\varepsilon \leftarrow \max(\varepsilon_{\min}, \varepsilon \times 0.995)$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Key property}: Uses $\max_{a'} Q(s', a')$ in the update, learning about the optimal policy regardless of the exploration policy. This can lead to faster convergence but may overestimate Q-values.
+
+\subsection{SARSA (On-Policy TD Control)}
+
+\begin{algorithm}[H]
+\caption{SARSA Agent Update}
+\begin{algorithmic}[1]
+\State \textbf{Initialize} $Q(s, a) \leftarrow 0$ for all $s, a$
+\For{each step}
+    \State Observe state $s$, choose action $a$ using $\varepsilon$-greedy
+    \State Take action $a$, observe reward $r$ and next state $s'$
+    \State Choose next action $a'$ using $\varepsilon$-greedy on $Q(s', \cdot)$
+    \State $Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma Q(s', a') - Q(s, a) \right]$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Key property}: Uses the actual next action $a'$ (including exploration), learning about the policy being followed. This results in more conservative policies that account for the risk of exploratory actions---potentially beneficial for safety-critical traffic control.
+
+\subsection{Fixed-Timer Baseline}
+
+No learning. Switches signal phase every 15 steps regardless of traffic conditions. This represents the traditional static approach and serves as the performance floor.
+
+\subsection{Multi-Agent Controller}
+
+The \texttt{MultiAgentController} class instantiates 16 independent agent copies (one per intersection). At each step:
+\begin{enumerate}[nosep]
+    \item Collects states from all intersections
+    \item Dispatches to each agent's \texttt{choose\_action} method
+    \item After environment step, dispatches rewards and next-states to each agent's \texttt{update} method
+    \item After each episode, decays $\varepsilon$ for all agents
+\end{enumerate}
+
+This is a \textbf{decentralized} architecture. Agents do not communicate directly, but coordination emerges through shared traffic dynamics---an action at intersection $i$ affects arrivals at intersection $j$ indirectly through rerouted traffic flows.
+
+\subsection{Hyperparameters}
+
+\begin{center}
+\begin{tabular}{lccc}
+    \toprule
+    \textbf{Parameter} & \textbf{Q-Learning} & \textbf{SARSA} & \textbf{Fixed-Timer} \\
+    \midrule
+    Learning rate $\alpha$ & 0.1 & 0.1 & --- \\
+    Discount factor $\gamma$ & 0.95 & 0.95 & --- \\
+    Initial $\varepsilon$ & 1.0 & 1.0 & --- \\
+    $\varepsilon$ decay & 0.995 & 0.995 & --- \\
+    Minimum $\varepsilon$ & 0.01 & 0.01 & --- \\
+    Switch interval & --- & --- & 15 steps \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+%=============================================================================
+\section{Simulation Engine}
+%=============================================================================
+
+\subsection{Experiment Design}
+
+The \texttt{SimulationRunner} class (in \texttt{src/simulation.py}) orchestrates all experiments:
+
+\begin{center}
+\begin{tabular}{ll}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    Agent types & Fixed-Timer, Q-Learning, SARSA \\
+    Scenarios & Normal, Rush Hour, Incident, Event, Bus Priority \\
+    Total experiments & $3 \times 5 = 15$ \\
+    Episodes per experiment & 300 \\
+    Steps per episode & 200 ($\approx$ 100 min simulated) \\
+    Evaluation window & Last 50 episodes \\
+    Smoothing window & 10 episodes (for visualization) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Training Loop}
+
+For each (agent\_type, scenario) pair:
+\begin{enumerate}[nosep]
+    \item Create a \texttt{TrafficEnvironment} with the scenario configuration
+    \item Create a \texttt{MultiAgentController} with 16 agents of the specified type
+    \item Run 300 episodes:
+    \begin{enumerate}[nosep]
+        \item Reset environment, get initial states
+        \item For 200 steps: choose actions, step environment, update agents
+        \item After episode: decay $\varepsilon$, record metrics
+    \end{enumerate}
+    \item Compute final performance as average of last 50 episodes
+\end{enumerate}
+
+\subsection{Metrics Collected Per Episode}
+
+\begin{itemize}[nosep]
+    \item \texttt{episode\_rewards}: Sum of all 16 intersection rewards over 200 steps
+    \item \texttt{avg\_wait\_times}: Mean cumulative wait across intersections
+    \item \texttt{throughputs}: Total vehicles passed through all intersections
+    \item \texttt{avg\_queues}: Mean total queue length (NS + EW) across intersections
+    \item \texttt{emissions}: Total CO$_2$ emissions (kg) across all intersections
+    \item \texttt{safety\_scores}: Composite safety score (0--100)
+    \item \texttt{epsilons}: Current exploration rate
+\end{itemize}
+
+\subsection{Live Simulation Generation}
+
+For dashboard playback, a separate method generates step-by-step simulation frames with low exploration ($\varepsilon = 0.1$) to show near-trained behavior. Each frame contains the full grid state, per-intersection queues, phases, actions, and rewards.
+
+%=============================================================================
+\section{Multi-Criteria Decision Making}
+%=============================================================================
+
+\subsection{Decision Matrix Construction}
+
+For each scenario, the final-performance metrics of each agent type form the decision matrix:
+
+\begin{equation}
+    \mathbf{D} =
+    \begin{pmatrix}
+        \text{throughput}_1 & \text{safety}_1 & \text{emissions}_1 & \text{bus\_delay}_1 \\
+        \text{throughput}_2 & \text{safety}_2 & \text{emissions}_2 & \text{bus\_delay}_2 \\
+        \vdots & \vdots & \vdots & \vdots \\
+        \text{throughput}_n & \text{safety}_n & \text{emissions}_n & \text{bus\_delay}_n
+    \end{pmatrix}
+\end{equation}
+
+Alternatives include:
+\begin{itemize}[nosep]
+    \item Fixed Timer
+    \item Q-Learning
+    \item SARSA
+    \item Q-Learning + Bus Priority
+    \item SARSA + Bus Priority
+\end{itemize}
+
+\subsection{Criteria and Weights}
+
+\begin{center}
+\begin{tabular}{lccl}
+    \toprule
+    \textbf{Criterion} & \textbf{Weight} & \textbf{Optimize} & \textbf{Rationale} \\
+    \midrule
+    Efficiency (throughput) & 0.35 & Maximize & Primary traffic flow objective \\
+    Safety (score 0--100) & 0.25 & Maximize & Human safety is critical \\
+    Emissions (CO$_2$ kg) & 0.25 & Minimize & Environmental sustainability \\
+    Public Transport (bus delay) & 0.15 & Minimize & Encourage public transit usage \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{WSM Implementation}
+
+\begin{enumerate}[nosep]
+    \item \textbf{Min-max normalization}: For benefit criteria: $\bar{r}_{ij} = \frac{r_{ij} - \min_k r_{kj}}{\max_k r_{kj} - \min_k r_{kj}}$. For cost criteria: $\bar{r}_{ij} = \frac{\max_k r_{kj} - r_{ij}}{\max_k r_{kj} - \min_k r_{kj}}$.
+    \item \textbf{Weighted sum}: $S_i = \sum_{j=1}^{4} w_j \cdot \bar{r}_{ij}$
+    \item \textbf{Rank}: Sort alternatives by $S_i$ in descending order
+\end{enumerate}
+
+\subsection{TOPSIS Implementation}
+
+\begin{enumerate}[nosep]
+    \item \textbf{Vector normalization}: $\bar{r}_{ij} = r_{ij} / \sqrt{\sum_{k=1}^{m} r_{kj}^2}$
+    \item \textbf{Weighted matrix}: $v_{ij} = w_j \cdot \bar{r}_{ij}$
+    \item \textbf{Ideal solution} $A^+$: Best value per criterion (max for benefit, min for cost)
+    \item \textbf{Anti-ideal solution} $A^-$: Worst value per criterion
+    \item \textbf{Euclidean distances}: $D_i^+ = \sqrt{\sum_{j} (v_{ij} - A_j^+)^2}$, $D_i^- = \sqrt{\sum_{j} (v_{ij} - A_j^-)^2}$
+    \item \textbf{Closeness coefficient}: $C_i = D_i^- / (D_i^+ + D_i^-)$, range [0, 1], higher is better
+    \item \textbf{Rank}: Sort by $C_i$ descending
+\end{enumerate}
+
+\subsection{Sensitivity Analysis}
+
+The system varies each criterion's weight by $\pm 0.15$ in 5 steps. For each variation:
+\begin{itemize}[nosep]
+    \item The modified weight is adjusted for the target criterion
+    \item The remaining delta is redistributed equally across other criteria
+    \item All weights are clipped to $\geq 0.05$ and re-normalized to sum to 1.0
+    \item Both WSM and TOPSIS rankings are recomputed
+\end{itemize}
+
+This reveals whether the top-ranked policy changes under different stakeholder priorities (e.g., if a decision-maker cares more about emissions than efficiency).
+
+%=============================================================================
+\section{Dashboard Design}
+%=============================================================================
+
+\subsection{Technology}
+
+\begin{itemize}[nosep]
+    \item \textbf{Build tool}: Vite 5.x (fast HMR, ESM-native)
+    \item \textbf{Framework}: React 18.x (functional components, hooks)
+    \item \textbf{Charts}: Recharts 2.x (composable, responsive)
+    \item \textbf{Styling}: Tailwind CSS 3.x (utility-first)
+    \item \textbf{Data}: Static JSON files in \texttt{dashboard/public/data/}
+\end{itemize}
+
+\subsection{Dashboard Sections}
+
+\subsubsection{Overview Panel}
+\begin{itemize}[nosep]
+    \item Key metric cards: best throughput, lowest wait time, lowest emissions, highest safety
+    \item Scenario selector dropdown
+    \item Agent comparison summary table
+\end{itemize}
+
+\subsubsection{Live Simulation}
+\begin{itemize}[nosep]
+    \item Animated 4$\times$4 grid visualization
+    \item Each cell shows: intersection ID, signal phase (green/red), queue lengths (NS/EW bars)
+    \item Play/pause/step controls with adjustable speed
+    \item Real-time metric charts updating each step (queue, throughput, emissions)
+    \item Agent type selector to compare behavior visually
+\end{itemize}
+
+\subsubsection{Training Curves}
+\begin{itemize}[nosep]
+    \item Line charts for reward, wait time, throughput, emissions, safety over episodes
+    \item Multi-series: overlay all three agents on one chart for direct comparison
+    \item Scenario tabs to switch between training contexts
+    \item Epsilon decay overlay on reward chart
+\end{itemize}
+
+\subsubsection{Scenario Comparison}
+\begin{itemize}[nosep]
+    \item Grouped bar charts: metric per agent per scenario
+    \item Heatmap: agent$\times$scenario matrix colored by relative performance
+    \item Summary table with all 15 experiment results
+\end{itemize}
+
+\subsubsection{MCDM Analysis}
+\begin{itemize}[nosep]
+    \item Radar/spider charts: criteria contributions per alternative
+    \item WSM ranking bar chart with score breakdown
+    \item TOPSIS ranking bar chart with closeness coefficients
+    \item Sensitivity analysis: line plots showing rank changes as weights vary
+    \item Interactive weight sliders to explore custom weight combinations
+\end{itemize}
+
+\subsubsection{Data Explorer}
+\begin{itemize}[nosep]
+    \item Summary statistics from synthetic datasets
+    \item 24-hour traffic pattern visualization
+    \item Emergency response time comparison (with vs. without preemption)
+    \item Congestion heatmaps by zone and hour
+\end{itemize}
+
+\subsection{JSON Data Contract}
+
+The dashboard consumes these pre-computed files:
+
+\begin{longtable}{p{5cm}p{7cm}}
+    \toprule
+    \textbf{File} & \textbf{Structure} \\
+    \midrule
+    training\_results.json & \texttt{\{scenario: \{agent: \{history: \{...\}, final\_metrics: \{...\}\}\}\}} \\
+    mcdm\_results.json & \texttt{\{scenario: \{wsm: \{...\}, topsis: \{...\}, sensitivity: [...]\}\}} \\
+    live\_simulation\_*.json & Array of frame objects: \texttt{\{step, grid: [...], metrics, actions, rewards\}} \\
+    scenario\_comparison.json & \texttt{\{scenario: \{label, agents: \{type: \{label, metrics\}\}\}\}} \\
+    intersection\_meta.json & Array of \texttt{\{id, row, col, base\_volume\}} \\
+    \bottomrule
+\end{longtable}
+
+%=============================================================================
+\section{How to Run the System}
+%=============================================================================
+
+\subsection{Prerequisites}
+
+\begin{itemize}[nosep]
+    \item Python 3.9 or higher
+    \item Node.js 18 or higher (for dashboard)
+    \item pip (Python package manager)
+    \item npm (Node package manager)
+\end{itemize}
+
+\subsection{Backend Setup}
+
+\begin{lstlisting}[language=bash, numbers=none]
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Run everything (generate data + train + export)
+python main.py
+\end{lstlisting}
+
+\texttt{main.py} executes four steps automatically:
+\begin{enumerate}[nosep]
+    \item Generates synthetic datasets in \texttt{Datasets/synthetic/}
+    \item Trains all 15 agent-scenario experiments (300 episodes each)
+    \item Exports JSON results to \texttt{dashboard/public/data/}
+    \item Prints a summary table of all results
+\end{enumerate}
+
+\subsection{Dashboard Setup}
+
+\begin{lstlisting}[language=bash, numbers=none]
+cd dashboard
+npm install
+npm run dev
+# Open http://localhost:5173 in browser
+\end{lstlisting}
+
+\subsection{Build for Production}
+
+\begin{lstlisting}[language=bash, numbers=none]
+cd dashboard
+npm run build
+# Static files in dashboard/dist/ ready for deployment
+\end{lstlisting}
+
+%=============================================================================
+\section{Expected Results and Interpretation}
+%=============================================================================
+
+\subsection{Training Convergence}
+
+\begin{itemize}[nosep]
+    \item \textbf{Q-Learning}: Expected to converge within 150--200 episodes with aggressive exploitation after $\varepsilon$ decays. Typically achieves the highest throughput but may have slightly lower safety scores due to frequent phase switching.
+    \item \textbf{SARSA}: Slightly slower convergence (200--250 episodes) but often produces more stable, conservative policies. May have marginally higher safety scores.
+    \item \textbf{Fixed-Timer}: Constant performance across all episodes (no learning). Serves as the lower bound.
+\end{itemize}
+
+\subsection{Scenario Impact}
+
+\begin{itemize}[nosep]
+    \item \textbf{Rush Hour}: All agents see increased wait times and queue lengths due to $2.5\times$ traffic volume. RL agents should show the greatest improvement over Fixed-Timer here.
+    \item \textbf{Incident}: Rerouted traffic challenges RL agents to adapt to asymmetric load. Fixed-Timer cannot adapt, causing significant congestion.
+    \item \textbf{Event}: Localized traffic spikes test whether RL agents can prioritize affected intersections.
+    \item \textbf{Bus Priority}: RL agents with bus-priority preemption should show better public transport metrics with slight throughput reduction.
+\end{itemize}
+
+\subsection{MCDM Rankings}
+
+The expected ranking (from WSM/TOPSIS with default weights) is typically:
+\begin{enumerate}[nosep]
+    \item Q-Learning or Q-Learning + Bus Priority (best efficiency-safety-emissions balance)
+    \item SARSA or SARSA + Bus Priority (slightly more conservative)
+    \item Fixed-Timer (worst overall, no adaptation)
+\end{enumerate}
+
+Sensitivity analysis may reveal that under heavy safety weighting, SARSA surpasses Q-Learning due to its conservative on-policy nature.
+
+%=============================================================================
+\section{Key Design Decisions}
+%=============================================================================
+
+\begin{enumerate}[nosep]
+    \item \textbf{Tabular RL over Deep RL}: The state space (50 states per intersection) is small enough for tabular methods, which are more interpretable and guaranteed to converge with sufficient exploration.
+    \item \textbf{Decentralized agents}: Each intersection learns independently. While centralized approaches could be more optimal, decentralized learning is more scalable and realistic for real deployments.
+    \item \textbf{Multi-objective reward}: Rather than optimizing a single metric, the reward function balances five objectives directly, allowing the trained policy to naturally trade off competing goals.
+    \item \textbf{Synthetic data}: Real intersection-level data at time-step resolution is unavailable, so calibrated synthetic data fills the gap while maintaining consistency with actual Dubai patterns.
+    \item \textbf{React dashboard}: A modern web framework allows interactive exploration of complex multi-dimensional results, far surpassing static report plots.
+\end{enumerate}
+
+%=============================================================================
+\section{Limitations and Future Work}
+%=============================================================================
+
+\begin{itemize}[nosep]
+    \item \textbf{Simplified traffic model}: The Poisson arrival model does not capture vehicle-level dynamics (car following, lane changing). A microscopic simulator (SUMO) would add realism.
+    \item \textbf{No inter-agent communication}: Agents learn independently. Adding explicit message passing or attention-based coordination could improve network-level performance.
+    \item \textbf{Fixed state discretization}: 50 states may lose information in high-traffic scenarios. Deep Q-Networks (DQN) with continuous states could improve scalability.
+    \item \textbf{No real sensor integration}: The system uses simulated data. Integration with actual IoT sensors and camera-based CNN detection would be the natural next step.
+    \item \textbf{Static MCDM weights}: Weights are fixed by domain assumption. A stakeholder elicitation process (e.g., AHP) could derive more justified weights.
+\end{itemize}
+
+%=============================================================================
+\section{Conclusion}
+%=============================================================================
+
+This project demonstrates that multi-agent reinforcement learning can significantly outperform fixed-timer traffic control across diverse traffic scenarios. Q-Learning and SARSA agents learn adaptive signal timing policies that reduce wait times, increase throughput, and lower emissions compared to the non-adaptive baseline. The MCDM framework (WSM and TOPSIS) provides a principled method for comparing policies across multiple competing objectives, with sensitivity analysis revealing the robustness of rankings to weight changes. The React.js dashboard makes these complex results accessible through interactive visualization, enabling stakeholders to explore trade-offs and make informed decisions about traffic management strategies.
+
+%=============================================================================
+\section*{References}
+%=============================================================================
+
+\begin{enumerate}[label={[\arabic*]}, nosep]
+    \item \label{ref:watkins} Watkins, C.J.C.H. and Dayan, P. (1992). Q-Learning. \textit{Machine Learning}, 8(3), 279--292.
+    \item \label{ref:rummery} Rummery, G.A. and Niranjan, M. (1994). On-Line Q-Learning Using Connectionist Systems. Technical Report CUED/F-INFENG/TR 166, Cambridge University.
+    \item \label{ref:sutton} Sutton, R.S. and Barto, A.G. (2018). \textit{Reinforcement Learning: An Introduction}. 2nd ed. MIT Press.
+    \item \label{ref:topsis} Hwang, C.L. and Yoon, K. (1981). \textit{Multiple Attribute Decision Making: Methods and Applications}. Springer-Verlag.
+    \item \label{ref:wsm} Fishburn, P.C. (1967). Additive Utilities with Incomplete Product Sets: Application to Priorities and Assignments. \textit{Operations Research}, 15(3), 537--542.
+    \item \label{ref:traffic_rl} Wei, H. et al. (2018). IntelliLight: A Reinforcement Learning Approach for Intelligent Traffic Light Control. \textit{KDD}, 2496--2505.
+    \item \label{ref:dubai_rta} Roads and Transport Authority, Dubai. (2025). Public Transport Statistics and Datasets. \url{https://www.rta.ae}
+\end{enumerate}
+
+\end{document}

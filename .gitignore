@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+dashboard/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build script (temporary)
+_build_dashboard.py
+
+# Large synthetic data (regenerate with: python main.py)
+Datasets/synthetic/vehicle_detections.csv
+
+# PDF research papers
+*.pdf
