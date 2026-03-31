@@ -1,4 +1,4 @@
-import { Zap, Clock, Wind, Shield } from "lucide-react"
+import { Zap, Clock, Wind, Shield, DollarSign, Fuel, Leaf, TrendingUp, Building2 } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -12,10 +12,10 @@ const NAMES = [
 ]
 const ZONES = ["DEIRA","DOWNTOWN","JUMEIRAH","SOUTH"]
 
-const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
+const AGENT_COLORS = { fixed_timer: "#FF4057", q_learning: "#4A90FF", sarsa: "#00E68C" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
 const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
-const ttStyle = { background: "#0F1629", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 12, color: "#F1F5F9" }
+const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8" }
 
 export default function Overview({ data }) {
   const cmp = data.scenario_comparison
@@ -61,6 +61,38 @@ export default function Overview({ data }) {
     { icon: Shield, label: "Best Safety Score", sub: AGENT_LABELS[bestSafe.ag], value: bestSafe.v?.toFixed(1), unit: "/ 100", color: "var(--purple)" },
   ]
 
+  // ── Economic Impact Calculations (Dubai context) ──
+  // Dubai avg salary: AED 20,000/month => AED 125/hr => AED 2.08/min
+  const DUBAI_VOT_PER_MIN = 2.08
+  const AVG_OCCUPANCY = 1.3
+  const FUEL_IDLE_LITER_PER_HR = 0.8
+  const CO2_PER_LITER = 2.31
+  const CARBON_CREDIT_AED = 73 // Dubai Carbon Credit price
+  const PEAK_HOURS_PER_DAY = 6
+  const SCALE_FACTOR = 45 // scale from 16-intersection sim to city-wide estimate
+
+  const waitReductionSteps = Math.max(0, ftW - qlW)
+  const waitReductionMin = waitReductionSteps * 0.5 // 1 step ~ 30 sec
+  const vehiclesPerHour = (bestTP.v || 0) * 3
+  const votPerHour = waitReductionMin * vehiclesPerHour * DUBAI_VOT_PER_MIN * AVG_OCCUPANCY * SCALE_FACTOR
+  const votPerYear = votPerHour * PEAK_HOURS_PER_DAY * 365
+
+  const fuelSavedPerHour = (waitReductionMin / 60) * vehiclesPerHour * FUEL_IDLE_LITER_PER_HR * SCALE_FACTOR
+  const fuelSavedPerYear = fuelSavedPerHour * PEAK_HOURS_PER_DAY * 365
+
+  const co2PerHour = fuelSavedPerHour * CO2_PER_LITER
+  const co2PerYear = co2PerHour * PEAK_HOURS_PER_DAY * 365 / 1000 // tons
+  const carbonCreditRevenue = co2PerYear * CARBON_CREDIT_AED
+
+  const totalAnnualSavings = votPerYear + (fuelSavedPerYear * 2.8) + carbonCreditRevenue // AED 2.8/liter avg fuel price
+
+  const bizMetrics = [
+    { icon: DollarSign, label: "Value of Time Saved", perHour: votPerHour, perYear: votPerYear, unit: "AED", color: "#00D4FF", desc: "Reduced commuter waiting cost" },
+    { icon: Fuel, label: "Fuel Savings", perHour: fuelSavedPerHour, perYear: fuelSavedPerYear, unit: "Liters", color: "#FFB800", desc: "Reduced idle fuel consumption" },
+    { icon: Leaf, label: "CO\u2082 Reduction", perHour: co2PerHour, perYear: co2PerYear, unit: co2PerYear > 1 ? "Tons/yr" : "kg/hr", color: "#00E68C", desc: "Greenhouse gas emission savings" },
+    { icon: Building2, label: "Carbon Credits", perHour: 0, perYear: carbonCreditRevenue, unit: "AED", color: "#A78BFA", desc: "Dubai carbon market revenue" },
+  ]
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* KPI Cards */}
@@ -83,6 +115,55 @@ export default function Overview({ data }) {
             </div>
           )
         })}
+      </div>
+
+      {/* ── Economic Impact Analysis ── */}
+      <div className="card fade-up" style={{ borderImage: "linear-gradient(135deg, rgba(0,212,255,0.2), rgba(255,184,0,0.2)) 1", borderImageSlice: 1, borderWidth: 1, borderStyle: "solid", borderRadius: 16, background: "linear-gradient(135deg, rgba(0,212,255,0.02), rgba(255,184,0,0.02)), var(--bg-card)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div className="section-title" style={{ marginBottom: 0 }}>
+            <TrendingUp size={18} style={{ color: "var(--cyan)" }} />
+            {"Economic Impact Analysis \u2014 Dubai RTA Projection"}
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "var(--cyan)", letterSpacing: "-0.03em" }}>
+              {"AED "}{(totalAnnualSavings / 1e6).toFixed(1)}{"M"}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-label)" }}>{"Projected Annual Savings"}</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {bizMetrics.map((b, i) => {
+            const Icon = b.icon
+            return (
+              <div key={i} style={{ background: "var(--bg-card-alt)", borderRadius: 14, padding: "18px 20px", border: "1px solid var(--border-subtle)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: b.color, opacity: 0.6 }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: b.color + "15", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={16} style={{ color: b.color }} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{b.label}</span>
+                </div>
+                {b.perHour > 0 && (
+                  <div style={{ fontSize: 13, color: "var(--text-label)", marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, color: b.color, fontSize: 16 }}>{b.perHour >= 1000 ? (b.perHour/1000).toFixed(1) + "K" : b.perHour.toFixed(1)}</span>
+                    <span style={{ marginLeft: 4 }}>{b.unit}{"/hr"}</span>
+                  </div>
+                )}
+                <div style={{ fontSize: 13, color: "var(--text-label)" }}>
+                  <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: 18 }}>{b.perYear >= 1e6 ? (b.perYear/1e6).toFixed(2) + "M" : b.perYear >= 1000 ? (b.perYear/1000).toFixed(1) + "K" : b.perYear.toFixed(1)}</span>
+                  <span style={{ marginLeft: 4 }}>{b.unit}{"/year"}</span>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 6 }}>{b.desc}</div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ marginTop: 16, padding: "12px 16px", background: "rgba(0,212,255,0.04)", borderRadius: 10, border: "1px solid rgba(0,212,255,0.08)", fontSize: 11, color: "var(--text-label)", lineHeight: 1.6 }}>
+          {"Methodology: Value of Time (VoT) based on Dubai avg salary AED 20K/month (AED 2.08/min/person). "
+          + "Fuel savings at 0.8L/hr idle rate. CO\u2082 at 2.31 kg/liter. Carbon credits at AED 73/ton (Dubai Carbon Exchange). "
+          + "Scaled from 16-intersection simulation to city-wide estimate (\u00d745 factor for Dubai's 700+ signalized intersections). "
+          + "Peak hours: 6hr/day."}
+        </div>
       </div>
 
       {/* Grid Map + Radar */}
@@ -173,7 +254,7 @@ export default function Overview({ data }) {
         <div className="section-title">
           <span className="dot" style={{ background: "var(--purple)" }} />
           Complete Experiment Results
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>5 Scenarios \u00d7 3 Agents = 15 Experiments</span>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>5 Scenarios × 3 Agents = 15 Experiments</span>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table className="data-table">

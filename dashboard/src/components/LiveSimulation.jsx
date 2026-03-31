@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { Play, Pause, SkipForward, RotateCcw, Activity } from "lucide-react"
+import { Play, Pause, SkipForward, RotateCcw, Activity, Brain, AlertTriangle, CloudRain, Wifi, Ambulance, ChevronRight } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 
 const NAMES = [
@@ -10,18 +10,59 @@ const NAMES = [
 ]
 const ZONES = ["DEIRA","DOWNTOWN","JUMEIRAH","SOUTH DUBAI"]
 const AGENT_META = {
-  q_learning: { label: "Q-Learning", color: "#3B82F6", desc: "Off-policy TD control" },
-  sarsa: { label: "SARSA", color: "#10B981", desc: "On-policy TD control" },
-  fixed_timer: { label: "Fixed Timer", color: "#EF4444", desc: "Baseline (30s cycle)" },
+  q_learning: { label: "Q-Learning", color: "#4A90FF", desc: "Off-policy TD control" },
+  sarsa: { label: "SARSA", color: "#00E68C", desc: "On-policy TD control" },
+  fixed_timer: { label: "Fixed Timer", color: "#FF4057", desc: "Baseline (30s cycle)" },
 }
-const ttStyle = { background: "#0F1629", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 12, color: "#F1F5F9", fontSize: 11 }
+const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8", fontSize: 11 }
+
+const ACTION_NAMES = ["Hold", "Switch", "Extend"]
 
 function congestionInfo(qNS, qEW) {
   const t = qNS + qEW
-  if (t < 8) return { fill: "#10B981", ring: "rgba(16,185,129,0.15)", label: "Low", textColor: "#6EE7B7" }
-  if (t < 20) return { fill: "#F59E0B", ring: "rgba(245,158,11,0.15)", label: "Moderate", textColor: "#FCD34D" }
-  if (t < 40) return { fill: "#F97316", ring: "rgba(249,115,22,0.15)", label: "High", textColor: "#FDBA74" }
-  return { fill: "#EF4444", ring: "rgba(239,68,68,0.2)", label: "Critical", textColor: "#FCA5A5" }
+  if (t < 8) return { fill: "#00E68C", ring: "rgba(0,230,140,0.12)", label: "Low", textColor: "#6EFFC4" }
+  if (t < 20) return { fill: "#FFB800", ring: "rgba(255,184,0,0.12)", label: "Moderate", textColor: "#FFD666" }
+  if (t < 40) return { fill: "#FF9500", ring: "rgba(255,149,0,0.12)", label: "High", textColor: "#FFB84D" }
+  return { fill: "#FF4057", ring: "rgba(255,64,87,0.15)", label: "Critical", textColor: "#FF8A9A" }
+}
+
+function explainDecision(inter, action, reward, agentType) {
+  if (!inter) return { confidence: 0, reason: "No data", factors: [] }
+  const qDiff = Math.abs(inter.queue_ns - inter.queue_ew)
+  const totalQ = inter.queue_ns + inter.queue_ew
+  const heavierDir = inter.queue_ns >= inter.queue_ew ? "NS" : "EW"
+  const lighterDir = heavierDir === "NS" ? "EW" : "NS"
+  const heavierQ = Math.max(inter.queue_ns, inter.queue_ew)
+  const lighterQ = Math.min(inter.queue_ns, inter.queue_ew)
+  const factors = []
+
+  if (agentType === "fixed_timer") {
+    return { confidence: 100, reason: "Fixed 30s cycle rotation (no adaptive logic)", factors: ["Pre-programmed timer", "No queue awareness"] }
+  }
+
+  let confidence = 50
+  let reason = ""
+
+  if (action === 0) { // Hold
+    confidence = Math.min(95, 60 + qDiff * 2 + (reward > 0 ? 15 : 0))
+    reason = `Maintain current phase — ${inter.phase === 0 ? "NS" : "EW"} active, serving ${inter.phase === 0 ? inter.queue_ns : inter.queue_ew} vehicles`
+    factors.push(`Current phase handling ${inter.phase === 0 ? "NS" : "EW"} traffic`)
+    if (qDiff < 5) factors.push("Queue balance sufficient")
+    if (reward > 0) factors.push("Positive reward confirms decision")
+  } else if (action === 1) { // Switch
+    confidence = Math.min(95, 55 + qDiff * 3)
+    reason = `Switch to ${heavierDir} — queue imbalance (${heavierQ} vs ${lighterQ})`
+    factors.push(`${heavierDir} queue (${heavierQ}) exceeds ${lighterDir} (${lighterQ})`)
+    factors.push(`Queue differential: ${qDiff} vehicles`)
+    if (totalQ > 20) factors.push("High total congestion triggers rebalance")
+  } else { // Extend
+    confidence = Math.min(90, 50 + heavierQ * 2)
+    reason = `Extend green for ${inter.phase === 0 ? "NS" : "EW"} — clearing ${heavierQ}-vehicle backlog`
+    factors.push(`Active queue still large (${heavierQ})`)
+    factors.push("Extension reduces stop-start cycles")
+  }
+
+  return { confidence, reason, factors }
 }
 
 export default function LiveSimulation({ data }) {
@@ -34,6 +75,8 @@ export default function LiveSimulation({ data }) {
   const [step, setStep] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(300)
+  const [selectedIntersection, setSelectedIntersection] = useState(0)
+  const [chaos, setChaos] = useState({ sandstorm: false, sensorFail: false, emergency: false })
   const intervalRef = useRef(null)
 
   const frames = agents[agentType]
@@ -63,6 +106,31 @@ export default function LiveSimulation({ data }) {
   const maxQueue = frame?.grid?.reduce((m, g) => Math.max(m, g.queue_ns + g.queue_ew), 0) || 0
   const greenCount = frame?.grid?.filter(g => !g.is_yellow).length || 0
   const agMeta = AGENT_META[agentType]
+
+  // Chaos mode modifiers
+  const chaosMultiplier = useMemo(() => ({
+    throughput: chaos.sandstorm ? 0.55 : chaos.emergency ? 0.8 : 1,
+    queue: chaos.sandstorm ? 1.6 : chaos.sensorFail ? 1.1 : 1,
+    noise: chaos.sensorFail ? () => (Math.random() - 0.5) * 8 : () => 0,
+  }), [chaos])
+
+  const displayTP = Math.round((frame?.metrics?.throughput || 0) * chaosMultiplier.throughput)
+  const displayAvgQ = ((frame?.metrics?.avg_queue || 0) * chaosMultiplier.queue).toFixed(1)
+
+  // Selected intersection XAI
+  const selInter = frame?.grid?.[selectedIntersection]
+  const selAction = frame?.actions?.[selectedIntersection]
+  const selReward = frame?.rewards?.[selectedIntersection]
+  const xai = explainDecision(selInter, selAction, selReward, agentType)
+
+  // Failed sensor indices (random but deterministic per step)
+  const failedSensors = useMemo(() => {
+    if (!chaos.sensorFail) return []
+    const seed = step * 7 + 13
+    return [seed % 16, (seed * 3 + 5) % 16, (seed * 7 + 11) % 16].filter((v, i, a) => a.indexOf(v) === i)
+  }, [chaos.sensorFail, step])
+
+  const emergencyIdx = useMemo(() => chaos.emergency ? (step * 3 + 7) % 16 : -1, [chaos.emergency, step])
 
   if (!frames) return <p style={{ color: "var(--text-label)" }}>No live simulation data available.</p>
 
@@ -110,6 +178,33 @@ export default function LiveSimulation({ data }) {
           <span style={{ color: "var(--text-secondary)", width: 42 }}>{speed}ms</span>
         </div>
 
+        <div style={{ width: 1, height: 24, background: "var(--border-subtle)" }} />
+
+        {/* Chaos Mode */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: "var(--text-label)", fontWeight: 600, marginRight: 2 }}>{"Stress Test:"}</span>
+          {[
+            { key: "sandstorm", icon: CloudRain, label: "Sandstorm", color: "#FFB800" },
+            { key: "sensorFail", icon: Wifi, label: "Sensor Fail", color: "#FF4057" },
+            { key: "emergency", icon: Ambulance, label: "Emergency", color: "#4A90FF" },
+          ].map(c => {
+            const Icon = c.icon
+            const active = chaos[c.key]
+            return (
+              <button key={c.key} onClick={() => setChaos(p => ({ ...p, [c.key]: !p[c.key] }))}
+                style={{
+                  display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  background: active ? c.color + "18" : "var(--bg-elevated)",
+                  color: active ? c.color : "var(--text-muted)",
+                  border: active ? "1px solid " + c.color + "40" : "1px solid var(--border-subtle)",
+                  transition: "all 0.15s",
+                }}>
+                <Icon size={12} /> {c.label}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Progress */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -140,7 +235,7 @@ export default function LiveSimulation({ data }) {
             </div>
           </div>
 
-          <svg viewBox={"0 0 " + VB_W + " " + VB_H} className="traffic-grid-bg" style={{ width: "100%", display: "block" }}>
+          <svg viewBox={"0 0 " + VB_W + " " + VB_H} className="traffic-grid-bg" style={{ width: "100%", display: "block", background: chaos.sandstorm ? "#0B0A05" : "#060A10" }}>
             {/* Zone labels */}
             {ZONES.map((z, i) => (
               <text key={z} x="12" y={GO + i * GS + 4} fill="#475569" fontSize="8" fontWeight="700" letterSpacing="0.12em">{z}</text>
@@ -151,8 +246,8 @@ export default function LiveSimulation({ data }) {
               const y = GO + r * GS
               return (
                 <g key={"rh"+r}>
-                  <rect x={GO - 30} y={y - 16} width={GS * 3 + 60} height={32} rx="3" fill="#131A2E" />
-                  <line x1={GO - 25} y1={y} x2={GO + GS*3 + 25} y2={y} stroke="#1E293B" strokeWidth="1" strokeDasharray="10 6" />
+                  <rect x={GO - 30} y={y - 16} width={GS * 3 + 60} height={32} rx="3" fill={chaos.sandstorm ? "#1A1508" : "#0D1219"} />
+                  <line x1={GO - 25} y1={y} x2={GO + GS*3 + 25} y2={y} stroke={chaos.sandstorm ? "#3D2F10" : "#1A2236"} strokeWidth="1" strokeDasharray="10 6" />
                 </g>
               )
             })}
@@ -161,11 +256,16 @@ export default function LiveSimulation({ data }) {
               const x = GO + c * GS
               return (
                 <g key={"rv"+c}>
-                  <rect x={x - 16} y={GO - 30} width={32} height={GS * 3 + 60} rx="3" fill="#131A2E" />
-                  <line x1={x} y1={GO - 25} x2={x} y2={GO + GS*3 + 25} stroke="#1E293B" strokeWidth="1" strokeDasharray="10 6" />
+                  <rect x={x - 16} y={GO - 30} width={32} height={GS * 3 + 60} rx="3" fill={chaos.sandstorm ? "#1A1508" : "#0D1219"} />
+                  <line x1={x} y1={GO - 25} x2={x} y2={GO + GS*3 + 25} stroke={chaos.sandstorm ? "#3D2F10" : "#1A2236"} strokeWidth="1" strokeDasharray="10 6" />
                 </g>
               )
             })}
+
+            {/* Sandstorm overlay */}
+            {chaos.sandstorm && (
+              <rect x="0" y="0" width={VB_W} height={VB_H} fill="rgba(180,120,40,0.06)" rx="12" />
+            )}
 
             {/* INTERSECTIONS */}
             {frame?.grid?.map((inter, idx) => {
@@ -174,44 +274,76 @@ export default function LiveSimulation({ data }) {
               const ci = congestionInfo(inter.queue_ns, inter.queue_ew)
               const nsBar = Math.min(55, inter.queue_ns * 2.2)
               const ewBar = Math.min(55, inter.queue_ew * 2.2)
-              const nsCol = inter.phase === 0 ? "#22C55E" : "#EF4444"
-              const ewCol = inter.phase === 1 ? "#22C55E" : "#EF4444"
+              const nsCol = inter.phase === 0 ? "#22C55E" : "#FF4057"
+              const ewCol = inter.phase === 1 ? "#22C55E" : "#FF4057"
+              const isSelected = idx === selectedIntersection
+              const isSensorFailed = failedSensors.includes(idx)
+              const isEmergency = idx === emergencyIdx
 
               return (
-                <g key={idx}>
+                <g key={idx} onClick={() => setSelectedIntersection(idx)} style={{ cursor: "pointer" }}>
+                  {/* Selection highlight */}
+                  {isSelected && (
+                    <circle cx={cx} cy={cy} r="34" fill="none" stroke="#00D4FF" strokeWidth="2" strokeDasharray="4 3" opacity="0.6">
+                      <animate attributeName="stroke-dashoffset" values="0;14" dur="1.5s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+
+                  {/* Emergency vehicle pulse */}
+                  {isEmergency && (
+                    <>
+                      <circle cx={cx} cy={cy} r="36" fill="none" stroke="#4A90FF" strokeWidth="3">
+                        <animate attributeName="r" values="30;40" dur="0.6s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0.8;0" dur="0.6s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx={cx} cy={cy} r="36" fill="none" stroke="#FF4057" strokeWidth="3">
+                        <animate attributeName="r" values="32;42" dur="0.6s" repeatCount="indefinite" begin="0.3s" />
+                        <animate attributeName="opacity" values="0.8;0" dur="0.6s" repeatCount="indefinite" begin="0.3s" />
+                      </circle>
+                    </>
+                  )}
+
                   {/* Congestion ring */}
                   <circle cx={cx} cy={cy} r="28" fill={ci.ring} />
 
                   {/* NS Queue bar (upward) */}
                   {inter.queue_ns > 0 && <>
-                    <rect x={cx-3} y={cy - 28 - nsBar} width="6" height={nsBar} rx="3" fill="#3B82F6" opacity="0.8" />
-                    <text x={cx} y={cy - 32 - nsBar} textAnchor="middle" fill="#93C5FD" fontSize="8" fontWeight="700">{inter.queue_ns}</text>
+                    <rect x={cx-3} y={cy - 28 - nsBar} width="6" height={nsBar} rx="3" fill="#4A90FF" opacity="0.8" />
+                    <text x={cx} y={cy - 32 - nsBar} textAnchor="middle" fill="#93C5FD" fontSize="8" fontWeight="700">{isSensorFailed ? "?" : inter.queue_ns}</text>
                   </>}
 
                   {/* EW Queue bar (rightward) */}
                   {inter.queue_ew > 0 && <>
-                    <rect x={cx + 28} y={cy-3} width={ewBar} height="6" rx="3" fill="#F59E0B" opacity="0.8" />
-                    <text x={cx + 32 + ewBar} y={cy + 3} fill="#FCD34D" fontSize="8" fontWeight="700">{inter.queue_ew}</text>
+                    <rect x={cx + 28} y={cy-3} width={ewBar} height="6" rx="3" fill="#FFB800" opacity="0.8" />
+                    <text x={cx + 32 + ewBar} y={cy + 3} fill="#FFD666" fontSize="8" fontWeight="700">{isSensorFailed ? "?" : inter.queue_ew}</text>
                   </>}
 
                   {/* Main node */}
                   <circle cx={cx} cy={cy} r="20" fill={ci.fill} opacity="0.15" stroke={ci.fill} strokeWidth="2" />
-                  <circle cx={cx} cy={cy} r="14" fill="#0A0F1C" stroke={ci.fill} strokeWidth="1.5" />
+                  <circle cx={cx} cy={cy} r="14" fill="#080C14" stroke={ci.fill} strokeWidth="1.5" />
 
-                  {/* Traffic lights */}
-                  <circle cx={cx-6} cy={cy-5} r="3.5" fill={nsCol} opacity={inter.is_yellow ? 0.3 : 0.9} />
-                  <circle cx={cx+6} cy={cy-5} r="3.5" fill={ewCol} opacity={inter.is_yellow ? 0.3 : 0.9} />
-                  {inter.is_yellow && (
-                    <circle cx={cx} cy={cy-5} r="3.5" fill="#EAB308">
-                      <animate attributeName="opacity" values="1;0.3;1" dur="0.7s" repeatCount="indefinite" />
-                    </circle>
+                  {/* Sensor fail indicator */}
+                  {isSensorFailed && (
+                    <>
+                      <rect x={cx-10} y={cy-10} width="20" height="20" rx="4" fill="rgba(255,64,87,0.15)" stroke="#FF4057" strokeWidth="1" strokeDasharray="3 2" />
+                      <text x={cx} y={cy+4} textAnchor="middle" fill="#FF4057" fontSize="12" fontWeight="800">!</text>
+                    </>
                   )}
 
-                  {/* ID label */}
-                  <text x={cx} y={cy+6} textAnchor="middle" fill="#E2E8F0" fontSize="7" fontWeight="700">{String(idx+1).padStart(2,"0")}</text>
+                  {/* Traffic lights */}
+                  {!isSensorFailed && <>
+                    <circle cx={cx-6} cy={cy-5} r="3.5" fill={nsCol} opacity={inter.is_yellow ? 0.3 : 0.9} />
+                    <circle cx={cx+6} cy={cy-5} r="3.5" fill={ewCol} opacity={inter.is_yellow ? 0.3 : 0.9} />
+                    {inter.is_yellow && (
+                      <circle cx={cx} cy={cy-5} r="3.5" fill="#EAB308">
+                        <animate attributeName="opacity" values="1;0.3;1" dur="0.7s" repeatCount="indefinite" />
+                      </circle>
+                    )}
+                    <text x={cx} y={cy+6} textAnchor="middle" fill="#E2E8F0" fontSize="7" fontWeight="700">{String(idx+1).padStart(2,"0")}</text>
+                  </>}
 
                   {/* Name */}
-                  <text x={cx} y={cy+33} textAnchor="middle" fill="#CBD5E1" fontSize="7.5" fontWeight="600">{NAMES[idx]}</text>
+                  <text x={cx} y={cy+33} textAnchor="middle" fill="#C8D1DC" fontSize="7.5" fontWeight="600">{NAMES[idx]}</text>
 
                   {/* Congestion label */}
                   <text x={cx} y={cy+42} textAnchor="middle" fill={ci.textColor} fontSize="6" fontWeight="600">{ci.label}</text>
@@ -221,49 +353,99 @@ export default function LiveSimulation({ data }) {
 
             {/* Legend */}
             <g transform={"translate(" + (GO - 20) + "," + (VB_H - 30) + ")"}>
-              <rect x="0" y="-4" width="6" height="10" rx="2" fill="#3B82F6" opacity="0.8" />
-              <text x="10" y="4" fill="#94A3B8" fontSize="8" fontWeight="500">NS Queue</text>
-              <rect x="80" y="-4" width="10" height="6" rx="2" fill="#F59E0B" opacity="0.8" />
-              <text x="95" y="4" fill="#94A3B8" fontSize="8" fontWeight="500">EW Queue</text>
-              <circle cx="170" cy="1" r="4" fill="#22C55E" /><text x="178" y="4" fill="#94A3B8" fontSize="8">Green</text>
-              <circle cx="218" cy="1" r="4" fill="#EF4444" /><text x="226" y="4" fill="#94A3B8" fontSize="8">Red</text>
-              <circle cx="258" cy="1" r="4" fill="#EAB308" /><text x="266" y="4" fill="#94A3B8" fontSize="8">Yellow</text>
-              <circle cx="310" cy="1" r="6" fill="rgba(16,185,129,0.15)" stroke="#10B981" strokeWidth="1" /><text x="320" y="4" fill="#94A3B8" fontSize="8">Low</text>
-              <circle cx="350" cy="1" r="6" fill="rgba(239,68,68,0.2)" stroke="#EF4444" strokeWidth="1" /><text x="360" y="4" fill="#94A3B8" fontSize="8">Critical</text>
+              <rect x="0" y="-4" width="6" height="10" rx="2" fill="#4A90FF" opacity="0.8" />
+              <text x="10" y="4" fill="#8B99AD" fontSize="8" fontWeight="500">NS Queue</text>
+              <rect x="80" y="-4" width="10" height="6" rx="2" fill="#FFB800" opacity="0.8" />
+              <text x="95" y="4" fill="#8B99AD" fontSize="8" fontWeight="500">EW Queue</text>
+              <circle cx="170" cy="1" r="4" fill="#22C55E" /><text x="178" y="4" fill="#8B99AD" fontSize="8">Green</text>
+              <circle cx="218" cy="1" r="4" fill="#FF4057" /><text x="226" y="4" fill="#8B99AD" fontSize="8">Red</text>
+              <circle cx="258" cy="1" r="4" fill="#EAB308" /><text x="266" y="4" fill="#8B99AD" fontSize="8">Yellow</text>
+              <circle cx="310" cy="1" r="6" fill="rgba(0,230,140,0.12)" stroke="#00E68C" strokeWidth="1" /><text x="320" y="4" fill="#8B99AD" fontSize="8">Low</text>
+              <circle cx="350" cy="1" r="6" fill="rgba(255,64,87,0.15)" stroke="#FF4057" strokeWidth="1" /><text x="360" y="4" fill="#8B99AD" fontSize="8">Critical</text>
             </g>
           </svg>
         </div>
 
         {/* Right Panel */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Agent Info */}
-          <div className="card card-compact">
-            <div className="section-subtitle">Active Agent</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: agMeta.color }} />
-              <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{agMeta.label}</span>
+          {/* XAI Decision Logic Panel */}
+          <div className="card card-compact" style={{ borderColor: "rgba(0,212,255,0.15)", background: "linear-gradient(135deg, rgba(0,212,255,0.03), var(--bg-card))" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Brain size={15} style={{ color: "#00D4FF" }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{"XAI Decision Logic"}</span>
+              {chaos.sandstorm && <span className="badge" style={{ background: "rgba(255,184,0,0.12)", color: "#FFB800", fontSize: 9, marginLeft: "auto" }}>{"Sandstorm Active"}</span>}
+              {chaos.emergency && <span className="badge" style={{ background: "rgba(74,144,255,0.12)", color: "#4A90FF", fontSize: 9, marginLeft: "auto" }}>{"Emergency Active"}</span>}
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-label)", marginTop: 4 }}>{agMeta.desc}</div>
+
+            <div style={{ fontSize: 11, color: "var(--text-label)", marginBottom: 8 }}>
+              {"INT-"}{String(selectedIntersection+1).padStart(2,"0")} {NAMES[selectedIntersection]}
+              <span style={{ color: "var(--text-muted)", marginLeft: 6 }}>{"(click grid to select)"}</span>
+            </div>
+
+            {/* Decision */}
+            <div style={{ background: "var(--bg-card-alt)", borderRadius: 10, padding: 12, marginBottom: 10, border: "1px solid var(--border-subtle)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <ChevronRight size={12} style={{ color: "#00D4FF" }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: selAction === 0 ? "#00E68C" : selAction === 1 ? "#FFB800" : "#4A90FF" }}>
+                    {"Decision: "}{ACTION_NAMES[selAction] || "N/A"}
+                  </span>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#00D4FF" }}>{xai.confidence}{"% conf."}</span>
+              </div>
+              {/* Confidence bar */}
+              <div style={{ height: 4, background: "var(--bg-elevated)", borderRadius: 4, marginBottom: 10, overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 4, width: xai.confidence + "%", background: xai.confidence > 80 ? "#00E68C" : xai.confidence > 60 ? "#FFB800" : "#FF4057", transition: "width 0.3s" }} />
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 8 }}>{xai.reason}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {xai.factors.map((f, i) => (
+                  <span key={i} style={{ fontSize: 9, padding: "3px 8px", borderRadius: 6, background: "var(--bg-elevated)", color: "var(--text-label)", border: "1px solid var(--border-subtle)" }}>{f}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected intersection details */}
+            {selInter && (
+              <div className="grid grid-cols-2 gap-2" style={{ fontSize: 11 }}>
+                <div style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-card-alt)", border: "1px solid var(--border-subtle)" }}>
+                  <span style={{ color: "var(--text-muted)" }}>{"NS Queue "}</span>
+                  <span style={{ fontWeight: 700, color: "#4A90FF" }}>{selInter.queue_ns}</span>
+                </div>
+                <div style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-card-alt)", border: "1px solid var(--border-subtle)" }}>
+                  <span style={{ color: "var(--text-muted)" }}>{"EW Queue "}</span>
+                  <span style={{ fontWeight: 700, color: "#FFB800" }}>{selInter.queue_ew}</span>
+                </div>
+                <div style={{ padding: "6px 10px", borderRadius: 8, background: "var(--bg-card-alt)", border: "1px solid var(--border-subtle)" }}>
+                  <span style={{ color: "var(--text-muted)" }}>{"Phase "}</span>
+                  <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{selInter.phase === 0 ? "NS Green" : "EW Green"}</span>
+                </div>
+                <div style={{ padding: "6px 10px", borderRadius: 8, background: selReward >= 0 ? "var(--green-dim)" : "var(--red-dim)", border: "1px solid var(--border-subtle)" }}>
+                  <span style={{ color: "var(--text-muted)" }}>{"Reward "}</span>
+                  <span style={{ fontWeight: 700, color: selReward >= 0 ? "var(--green)" : "var(--red)" }}>{selReward?.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Live Stats */}
           <div className="card card-compact">
-            <div className="section-subtitle">Live Metrics</div>
+            <div className="section-subtitle">{"Network Metrics"}</div>
             <div className="grid grid-cols-2 gap-3">
               <div className="metric-mini">
-                <div className="metric-mini-label">Avg Queue</div>
-                <div className="metric-mini-value">{frame?.metrics?.avg_queue?.toFixed(1)}</div>
+                <div className="metric-mini-label">{"Avg Queue"}</div>
+                <div className="metric-mini-value">{displayAvgQ}</div>
               </div>
               <div className="metric-mini">
-                <div className="metric-mini-label">Throughput</div>
-                <div className="metric-mini-value" style={{ color: "var(--teal)" }}>{frame?.metrics?.throughput}</div>
+                <div className="metric-mini-label">{"Throughput"}</div>
+                <div className="metric-mini-value" style={{ color: "var(--teal)" }}>{displayTP}</div>
               </div>
               <div className="metric-mini">
-                <div className="metric-mini-label">Peak Queue</div>
+                <div className="metric-mini-label">{"Peak Queue"}</div>
                 <div className="metric-mini-value" style={{ color: "var(--gold)" }}>{maxQueue}</div>
               </div>
               <div className="metric-mini">
-                <div className="metric-mini-label">Total Queue</div>
+                <div className="metric-mini-label">{"Total Queue"}</div>
                 <div className="metric-mini-value">{totalQueue}</div>
               </div>
             </div>
@@ -271,57 +453,67 @@ export default function LiveSimulation({ data }) {
 
           {/* Rolling Chart */}
           <div className="card card-compact">
-            <div className="section-subtitle">Queue Trend (Last 30 Steps)</div>
-            <ResponsiveContainer width="100%" height={140}>
+            <div className="section-subtitle">{"Queue Trend (Last 30 Steps)"}</div>
+            <ResponsiveContainer width="100%" height={130}>
               <LineChart data={rollingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1A2236" />
-                <XAxis dataKey="step" stroke="#475569" tick={{ fontSize: 9, fill: "#94A3B8" }} />
-                <YAxis stroke="#475569" tick={{ fontSize: 9, fill: "#94A3B8" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#141A22" />
+                <XAxis dataKey="step" stroke="#3A4458" tick={{ fontSize: 9, fill: "#8B99AD" }} />
+                <YAxis stroke="#3A4458" tick={{ fontSize: 9, fill: "#8B99AD" }} />
                 <Tooltip contentStyle={ttStyle} />
-                <Line type="monotone" dataKey="queue" stroke="#3B82F6" strokeWidth={2} dot={false} name="Avg Queue" />
-                <Line type="monotone" dataKey="tp" stroke="#06B6D4" strokeWidth={1.5} dot={false} strokeDasharray="4 3" name="Throughput" />
+                <Line type="monotone" dataKey="queue" stroke="#4A90FF" strokeWidth={2} dot={false} name="Avg Queue" />
+                <Line type="monotone" dataKey="tp" stroke="#00D4FF" strokeWidth={1.5} dot={false} strokeDasharray="4 3" name="Throughput" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Agent Actions */}
+          {/* Agent Actions Grid */}
           <div className="card card-compact">
-            <div className="section-subtitle">Agent Actions (16 Intersections)</div>
+            <div className="section-subtitle">{"Agent Actions"}</div>
             <div className="grid grid-cols-4 gap-2">
               {frame?.actions?.map((a, i) => (
-                <div key={i} style={{
-                  textAlign: "center", padding: "6px 0", borderRadius: 8, fontSize: 11, fontWeight: 600,
-                  background: a === 0 ? "var(--bg-elevated)" : a === 1 ? "var(--gold-dim)" : "var(--blue-dim)",
-                  color: a === 0 ? "var(--text-label)" : a === 1 ? "var(--gold)" : "var(--blue)",
-                  border: a === 0 ? "1px solid var(--border-subtle)" : a === 1 ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(59,130,246,0.2)"
+                <div key={i} onClick={() => setSelectedIntersection(i)} style={{
+                  textAlign: "center", padding: "6px 0", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                  background: i === selectedIntersection ? "rgba(0,212,255,0.12)" : a === 0 ? "var(--bg-elevated)" : a === 1 ? "var(--gold-dim)" : "var(--blue-dim)",
+                  color: i === selectedIntersection ? "#00D4FF" : a === 0 ? "var(--text-label)" : a === 1 ? "var(--gold)" : "var(--blue)",
+                  border: i === selectedIntersection ? "1px solid rgba(0,212,255,0.3)" : a === 0 ? "1px solid var(--border-subtle)" : a === 1 ? "1px solid rgba(255,184,0,0.15)" : "1px solid rgba(74,144,255,0.15)"
                 }}>
-                  {a === 0 ? "Hold" : a === 1 ? "Switch" : "Ext."}
+                  {ACTION_NAMES[a] || "?"}
                 </div>
               ))}
-            </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 10, color: "var(--text-muted)" }}>
-              <span>Hold = maintain phase</span>
-              <span>Switch = change signal</span>
-              <span>Ext. = extend green</span>
             </div>
           </div>
 
           {/* Reward Grid */}
           <div className="card card-compact">
-            <div className="section-subtitle">Step Rewards</div>
+            <div className="section-subtitle">{"Step Rewards"}</div>
             <div className="grid grid-cols-4 gap-2">
               {frame?.rewards?.map((r, i) => (
-                <div key={i} style={{
-                  textAlign: "center", padding: "5px 0", borderRadius: 8,
+                <div key={i} onClick={() => setSelectedIntersection(i)} style={{
+                  textAlign: "center", padding: "5px 0", borderRadius: 8, cursor: "pointer",
                   fontSize: 11, fontFamily: "monospace", fontWeight: 600,
-                  background: r >= 0 ? "var(--green-dim)" : "var(--red-dim)",
-                  color: r >= 0 ? "var(--green)" : "var(--red)"
+                  background: i === selectedIntersection ? "rgba(0,212,255,0.12)" : r >= 0 ? "var(--green-dim)" : "var(--red-dim)",
+                  color: i === selectedIntersection ? "#00D4FF" : r >= 0 ? "var(--green)" : "var(--red)"
                 }}>
                   {r?.toFixed(1)}
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Chaos Mode Status */}
+          {(chaos.sandstorm || chaos.sensorFail || chaos.emergency) && (
+            <div className="card card-compact" style={{ borderColor: "rgba(255,64,87,0.15)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <AlertTriangle size={13} style={{ color: "#FF4057" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#FF4057" }}>{"Stress Test Active"}</span>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-label)", lineHeight: 1.6 }}>
+                {chaos.sandstorm && <div style={{ color: "#FFB800" }}>{"Sandstorm: Visibility reduced, capacity -45%, queue buildup +60%"}</div>}
+                {chaos.sensorFail && <div style={{ color: "#FF4057" }}>{"Sensor Failure: "}{failedSensors.length}{" intersections reporting noisy data (marked with !)"}</div>}
+                {chaos.emergency && <div style={{ color: "#4A90FF" }}>{"Emergency Vehicle: Priority routing at INT-"}{String(emergencyIdx+1).padStart(2,"0")}{" "}{NAMES[emergencyIdx]}</div>}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

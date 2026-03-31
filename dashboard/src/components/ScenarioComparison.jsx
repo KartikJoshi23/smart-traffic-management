@@ -2,10 +2,10 @@ import { useState } from "react"
 import { GitCompare, ArrowUp, ArrowDown } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 
-const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
+const AGENT_COLORS = { fixed_timer: "#FF4057", q_learning: "#4A90FF", sarsa: "#00E68C" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
 const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
-const ttStyle = { background: "#0F1629", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 12, color: "#F1F5F9", fontSize: 11 }
+const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8", fontSize: 11 }
 
 const METRIC_OPTS = [
   { key: "avg_throughput", label: "Throughput", unit: "vehicles", higher: true },

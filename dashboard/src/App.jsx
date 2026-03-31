@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { LayoutDashboard, Play, TrendingUp, GitCompare, Scale } from "lucide-react"
+import { LayoutDashboard, Play, TrendingUp, GitCompare, Scale, GitFork, ExternalLink } from "lucide-react"
 import Overview from "./components/Overview"
 import LiveSimulation from "./components/LiveSimulation"
 import TrainingCurves from "./components/TrainingCurves"
@@ -42,8 +42,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-page)" }}>
-      {/* Top accent line */}
-      <div style={{ height: 3, background: "linear-gradient(90deg, #06B6D4 0%, #3B82F6 40%, #8B5CF6 70%, #F59E0B 100%)" }} />
+      {/* Top accent line — traffic light gradient */}
+      <div style={{ height: 3, background: "linear-gradient(90deg, #FF4057 0%, #FFB800 30%, #00E68C 60%, #00D4FF 100%)" }} />
 
       {/* Header */}
       <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
@@ -63,16 +63,22 @@ export default function App() {
                 Dubai Smart Traffic Management
               </h1>
               <p style={{ fontSize: 12, color: "var(--text-label)", marginTop: 2 }}>
-                Multi-Agent RL \u00b7 Q-Learning & SARSA \u00b7 WSM & TOPSIS Decision Analysis
+                Multi-Agent RL · Q-Learning & SARSA · WSM & TOPSIS Decision Analysis
               </p>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <a href="https://github.com/KartikJoshi23/smart-traffic-management" target="_blank" rel="noopener noreferrer"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-label)", fontSize: 12, textDecoration: "none", transition: "all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-medium)"; e.currentTarget.style.color = "var(--text-primary)" }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border-subtle)"; e.currentTarget.style.color = "var(--text-label)" }}>
+              <GitFork size={14} /> GitHub <ExternalLink size={10} />
+            </a>
             <div className="badge-green" style={{ gap: 6 }}>
               <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)" }} />
               System Online
             </div>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>MAIB \u00b7 RDMU \u00b7 Group 2</span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>MAIB · RDMU · Group 2</span>
           </div>
         </div>
       </header>
@@ -121,8 +127,8 @@ export default function App() {
       {/* Footer */}
       <footer style={{ borderTop: "1px solid var(--border-subtle)", marginTop: 40 }}>
         <div style={{ maxWidth: 1440, margin: "0 auto", padding: "16px 32px", display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)" }}>
-          <span>Kartik Joshi \u2022 Anurag Deverakonda \u2022 Nandana Santosh \u2022 Weiqi Liu \u2022 Advait Dalvi \u2022 Gautam Barai</span>
-          <span>Masters in AI with Business \u00b7 Term 2 \u00b7 RDMU \u00b7 2026</span>
+          <span>Kartik Joshi • Anurag Deverakonda • Nandana Santosh • Weiqi Liu • Advait Dalvi • Gautam Barai</span>
+          <span>Masters in AI with Business · Term 2 · RDMU · 2026</span>
         </div>
       </footer>
     </div>

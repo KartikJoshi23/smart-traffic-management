@@ -2,10 +2,10 @@ import { useState } from "react"
 import { TrendingUp, BookOpen } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 
-const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
+const AGENT_COLORS = { fixed_timer: "#FF4057", q_learning: "#4A90FF", sarsa: "#00E68C" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
 const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
-const ttStyle = { background: "#0F1629", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 12, color: "#F1F5F9", fontSize: 11 }
+const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8", fontSize: 11 }
 
 const METRICS = [
   { key: "episode_rewards", label: "Cumulative Reward" },
@@ -71,8 +71,8 @@ export default function TrainingCurves({ data }) {
       <div className="card">
         <div className="section-title">
           <TrendingUp size={16} style={{ color: "var(--blue)" }} />
-          {METRICS.find(m => m.key === metric)?.label} \u2014 {SC_LABELS[scenario]}
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{numEp} episodes \u00b7 200 steps each</span>
+          {METRICS.find(m => m.key === metric)?.label}{" \u2014 "}{SC_LABELS[scenario]}
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{numEp}{" episodes · 200 steps each"}</span>
         </div>
         <ResponsiveContainer width="100%" height={380}>
           <AreaChart data={chartData}>
@@ -102,8 +102,8 @@ export default function TrainingCurves({ data }) {
       <div className="card">
         <div className="section-title">
           <BookOpen size={16} style={{ color: "var(--purple)" }} />
-          Exploration Rate (\u03b5) Decay
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>\u03b5-greedy \u00b7 decay = 0.995</span>
+          {"Exploration Rate (\u03b5) Decay"}
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{"\u03b5-greedy · decay = 0.995"}</span>
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={epsilonData}>

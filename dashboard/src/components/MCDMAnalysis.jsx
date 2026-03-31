@@ -7,8 +7,8 @@ import {
 } from "recharts"
 
 const SC_LABELS = { normal:"Normal", rush_hour:"Rush Hour", incident:"Incident", event:"Event", bus_priority:"Bus Priority" }
-const COLORS = ["#3B82F6", "#10B981", "#EF4444", "#F59E0B", "#8B5CF6"]
-const ttStyle = { background: "#0F1629", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 12, color: "#F1F5F9", fontSize: 11 }
+const COLORS = ["#4A90FF", "#00E68C", "#FF4057", "#FFB800", "#A78BFA"]
+const ttStyle = { background: "#0B0F14", border: "1px solid rgba(148,163,184,0.10)", borderRadius: 12, color: "#F0F4F8", fontSize: 11 }
 
 function downloadCSV(d, sc) {
   if (!d) return
@@ -216,7 +216,7 @@ export default function MCDMAnalysis({ data }) {
         <div className="section-title">
           <Info size={16} style={{ color: "var(--purple)" }} />
           Sensitivity Analysis
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>TOPSIS closeness as each criterion weight varies \u00b10.15</span>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)", fontWeight: 400 }}>{"TOPSIS closeness as each criterion weight varies \u00b10.15"}</span>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {sensCharts.map(sc => (
