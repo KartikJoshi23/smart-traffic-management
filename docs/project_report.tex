@@ -79,7 +79,7 @@
 \begin{tabular}{ll}
     \toprule
     \textbf{Document Version} & 1.0 \\
-    \textbf{Date} & March 31, 2026 \\
+    \textbf{Date} & April 1, 2026 \\
     \textbf{Course} & RDMU --- Term 2, MAIB Program \\
     \textbf{Project} & Group Project 2: Smart City Traffic Management \\
     \bottomrule
@@ -87,7 +87,7 @@
 \end{center}
 
 \begin{abstract}
-This report presents the complete design, implementation, and evaluation of a Smart City Traffic Management System. The system uses multi-agent reinforcement learning (Q-Learning and SARSA) to train adaptive traffic signal controllers across a 4$\times$4 grid of intersections, and applies multi-criteria decision making (WSM and TOPSIS) to evaluate and compare control policies. Five traffic scenarios---Normal, Rush Hour, Incident, Event, and Bus Priority---are simulated using synthetic datasets calibrated to real Dubai traffic patterns. A React.js dashboard provides interactive visualization of training progress, live simulation playback, scenario comparisons, and MCDM trade-off analysis. This document serves as a single source of truth: it contains every detail required to understand, reproduce, and extend the system.
+This report presents the complete design, implementation, and evaluation of a Smart City Traffic Management System for Dubai. The system uses multi-agent reinforcement learning (Q-Learning and SARSA) with neighbor-aware state representations to train adaptive traffic signal controllers across a 4$\times$4 grid of 16 intersections mapped to real Dubai locations. Multi-criteria decision making (WSM and TOPSIS) evaluates competing objectives---efficiency, safety, emissions, and public transport priority. Five traffic scenarios (Normal, Rush Hour, Incident, Event, Bus Priority) are simulated using synthetic datasets calibrated to Dubai traffic patterns. Key innovations include: (a) an Explainable AI (XAI) panel that exposes real Q-values and decision reasoning for every traffic signal action, (b) economic impact analysis translating simulation results into AED savings using Dubai Value of Time metrics, (c) chaos mode stress testing (sandstorm, sensor failure, emergency vehicle scenarios), and (d) trained controller deployment where live simulation uses learned Q-tables rather than untrained agents. A React.js dashboard provides professional-grade visualization for all results. This document serves as a single source of truth: it contains every detail required to understand, reproduce, and extend the system.
 \end{abstract}
 
 \newpage
@@ -559,7 +559,14 @@ For each (agent\_type, scenario) pair:
 
 \subsection{Live Simulation Generation}
 
-For dashboard playback, a separate method generates step-by-step simulation frames with low exploration ($\varepsilon = 0.1$) to show near-trained behavior. Each frame contains the full grid state, per-intersection queues, phases, actions, and rewards.
+For dashboard playback, trained controllers (with learned Q-tables from 300 episodes of training) are passed to the live simulation generator. The live simulation runs with $\varepsilon = 0.05$ (near-greedy) so the dashboard shows genuinely learned behavior rather than random exploration. Each frame exports:
+\begin{itemize}[nosep]
+    \item Full grid state: per-intersection queues, phases, congestion levels, names
+    \item Actions taken and immediate rewards per intersection
+    \item \textbf{Q-values}: The complete Q-value vector $Q(s, \cdot)$ for the current state at each intersection, enabling the Explainable AI panel to show decision confidence and reasoning
+\end{itemize}
+
+This is a critical design decision: exporting real Q-values (not fabricated confidence scores) ensures the XAI panel displays genuine model internals.
 
 %=============================================================================
 \section{Multi-Criteria Decision Making}
@@ -636,6 +643,67 @@ The system varies each criterion's weight by $\pm 0.15$ in 5 steps. For each var
 This reveals whether the top-ranked policy changes under different stakeholder priorities (e.g., if a decision-maker cares more about emissions than efficiency).
 
 %=============================================================================
+\section{Explainable AI (XAI) Framework}
+%=============================================================================
+
+A key barrier to deploying AI in government traffic systems (such as Dubai's RTA) is \textbf{trust}. Decision-makers need to understand \textit{why} the AI chose a particular signal action. Tabular Q-learning is inherently explainable because every decision is backed by stored Q-values that can be directly inspected.
+
+\subsection{Q-Value Based Decision Explanation}
+
+For each intersection at each simulation step, the XAI system extracts:
+\begin{itemize}[nosep]
+    \item The Q-value vector $Q(s, a)$ for all 3 actions: KEEP, SWITCH, EXTEND
+    \item The chosen action $a^* = \arg\max_a Q(s, a)$
+    \item The confidence: $C = \min\left(99, \frac{Q_{max} - Q_{second}}{|Q_{max}| + 0.01} \times 100\right)$
+\end{itemize}
+
+The confidence metric measures how decisive the agent is: a high confidence means one action is clearly preferred, while low confidence indicates the agent is nearly indifferent between actions.
+
+\subsection{Human-Readable Reasoning}
+
+The dashboard generates natural-language explanations by inspecting the state:
+\begin{itemize}[nosep]
+    \item If $q_{NS} > 2 \times q_{EW}$: ``NS queue critical, extending/switching to NS green''
+    \item If $q_{EW} > 2 \times q_{NS}$: ``EW queue critical, extending/switching to EW green''
+    \item If $|q_{NS} - q_{EW}| < 5$: ``Balanced traffic, maintaining current phase''
+    \item If neighbor pressure is high: ``Upstream congestion detected, preparing for incoming wave''
+\end{itemize}
+
+This transforms raw Q-table lookups into actionable insights for traffic engineers.
+
+%=============================================================================
+\section{Stress Testing (Chaos Mode)}
+%=============================================================================
+
+Robust AI systems must handle edge cases, not just the ``happy path.'' The dashboard includes three stress-test scenarios that modify the displayed simulation metrics in real time:
+
+\subsection{Sandstorm Scenario}
+Dubai experiences periodic sandstorms that reduce visibility and road capacity. The simulation applies:
+\begin{itemize}[nosep]
+    \item Throughput reduced by 45\% (lower visibility $\rightarrow$ slower driving)
+    \item Queue lengths increased by 60\% (reduced capacity $\rightarrow$ longer accumulation)
+    \item Emissions increased by 30\% (more idling from slower dispersal)
+\end{itemize}
+
+\subsection{Sensor Failure Scenario}
+IoT sensors at intersections can fail due to hardware faults, power outages, or communication errors. The simulation models:
+\begin{itemize}[nosep]
+    \item 25\% of intersections marked as ``fault detected''
+    \item Queue readings show uncertainty markers
+    \item Demonstrates the importance of sensor redundancy in production deployments
+\end{itemize}
+
+\subsection{Emergency Vehicle Priority}
+When an emergency vehicle (ambulance, fire truck) approaches an intersection:
+\begin{itemize}[nosep]
+    \item The affected intersection receives signal preemption (forced green along emergency route)
+    \item Visual indicators show the priority override
+    \item Nearby intersections prepare for displaced traffic
+\end{itemize}
+
+These chaos scenarios demonstrate system resilience thinking---a critical consideration for any AI deployment in public infrastructure.
+
+%=============================================================================
 \section{Dashboard Design}
 %=============================================================================
 
@@ -645,40 +713,58 @@ This reveals whether the top-ranked policy changes under different stakeholder p
     \item \textbf{Build tool}: Vite 5.x (fast HMR, ESM-native)
     \item \textbf{Framework}: React 18.x (functional components, hooks)
     \item \textbf{Charts}: Recharts 2.x (composable, responsive)
-    \item \textbf{Styling}: Tailwind CSS 3.x (utility-first)
+    \item \textbf{Styling}: Tailwind CSS 3.x (utility-first, dark theme)
+    \item \textbf{Icons}: Lucide React (SVG icon library)
     \item \textbf{Data}: Static JSON files in \texttt{dashboard/public/data/}
+    \item \textbf{Deployment}: Vercel (static site hosting)
 \end{itemize}
 
 \subsection{Dashboard Sections}
 
 \subsubsection{Overview Panel}
 \begin{itemize}[nosep]
-    \item Key metric cards: best throughput, lowest wait time, lowest emissions, highest safety
+    \item Key metric cards with improvement percentages: throughput, wait time, emissions, safety
     \item Scenario selector dropdown
-    \item Agent comparison summary table
+    \item Agent comparison summary table with color-coded performance
+    \item \textbf{Business Impact / Economic Analysis}: AED value of time savings, fuel reduction in liters, CO$_2$ reduction in tons, all calculated per-intersection-per-day using Dubai-specific economic parameters (Dubai Average Salary Survey 2024, EPA idle fuel consumption rates, UAE carbon credit pricing)
 \end{itemize}
 
 \subsubsection{Live Simulation}
 \begin{itemize}[nosep]
-    \item Animated 4$\times$4 grid visualization
-    \item Each cell shows: intersection ID, signal phase (green/red), queue lengths (NS/EW bars)
-    \item Play/pause/step controls with adjustable speed
-    \item Real-time metric charts updating each step (queue, throughput, emissions)
-    \item Agent type selector to compare behavior visually
+    \item SVG-rendered 4$\times$4 Dubai road network with zone labels (Deira, Downtown, Jumeirah, South Dubai)
+    \item Dual-carriageway roads with dashed center lines connecting intersections
+    \item Each node shows: intersection name, signal phase (NS/EW arrows), congestion ring coloring
+    \item Proportional NS/EW queue bars extending from each intersection
+    \item Play/pause/step controls with adjustable speed (1$\times$--5$\times$)
+    \item \textbf{XAI Decision Logic Panel}: Clicking any intersection shows:
+    \begin{itemize}[nosep]
+        \item Real Q-values from the trained Q-table for all 3 actions
+        \item Confidence percentage derived from $\frac{Q_{max} - Q_{second}}{|Q_{max}| + 0.01} \times 100$
+        \item Human-readable reason: e.g., ``NS queue critical (23 vehicles), extending green''
+        \item Contributing factors as tags (queue imbalance, neighbor pressure, etc.)
+    \end{itemize}
+    \item \textbf{Chaos Mode Stress Testing}: Three toggle buttons:
+    \begin{itemize}[nosep]
+        \item \textbf{Sandstorm}: Simulates reduced visibility/capacity ($-45\%$ throughput, $+60\%$ queues). Visual: amber tint over the SVG grid
+        \item \textbf{Sensor Failure}: Random intersections show corrupted readings with fault indicators. Visual: red exclamation marks on affected nodes
+        \item \textbf{Emergency Vehicle}: Blue/red pulsing rings on priority intersection, signal preemption active. Visual: flashing emergency indicators
+    \end{itemize}
+    \item Agent type selector (Q-Learning / SARSA / Fixed Timer) to compare behavior
 \end{itemize}
 
 \subsubsection{Training Curves}
 \begin{itemize}[nosep]
-    \item Line charts for reward, wait time, throughput, emissions, safety over episodes
+    \item Area charts with gradient fills for reward, wait time, throughput, emissions, safety over 300 episodes
     \item Multi-series: overlay all three agents on one chart for direct comparison
     \item Scenario tabs to switch between training contexts
-    \item Epsilon decay overlay on reward chart
+    \item Epsilon decay visualization showing exploration $\rightarrow$ exploitation transition
+    \item Key annotations: convergence points, learning rate markers
 \end{itemize}
 
 \subsubsection{Scenario Comparison}
 \begin{itemize}[nosep]
-    \item Grouped bar charts: metric per agent per scenario
-    \item Heatmap: agent$\times$scenario matrix colored by relative performance
+    \item Color-coded heatmap: agent$\times$scenario matrix with HSL-based coloring
+    \item Improvement percentages with directional arrows (RL vs. Fixed Timer)
     \item Summary table with all 15 experiment results
 \end{itemize}
 
@@ -688,15 +774,8 @@ This reveals whether the top-ranked policy changes under different stakeholder p
     \item WSM ranking bar chart with score breakdown
     \item TOPSIS ranking bar chart with closeness coefficients
     \item Sensitivity analysis: line plots showing rank changes as weights vary
-    \item Interactive weight sliders to explore custom weight combinations
-\end{itemize}
-
-\subsubsection{Data Explorer}
-\begin{itemize}[nosep]
-    \item Summary statistics from synthetic datasets
-    \item 24-hour traffic pattern visualization
-    \item Emergency response time comparison (with vs. without preemption)
-    \item Congestion heatmaps by zone and hour
+    \item \textbf{Data Export}: Download MCDM results as CSV or JSON for further analysis
+    \item Gold-highlighted top-ranked alternative
 \end{itemize}
 
 \subsection{JSON Data Contract}
@@ -709,9 +788,9 @@ The dashboard consumes these pre-computed files:
     \midrule
     training\_results.json & \texttt{\{scenario: \{agent: \{history: \{...\}, final\_metrics: \{...\}\}\}\}} \\
     mcdm\_results.json & \texttt{\{scenario: \{wsm: \{...\}, topsis: \{...\}, sensitivity: [...]\}\}} \\
-    live\_simulation\_*.json & Array of frame objects: \texttt{\{step, grid: [...], metrics, actions, rewards\}} \\
+    live\_simulation\_*.json & Array of frame objects: \texttt{\{step, grid: [...], metrics, actions, rewards, q\_values\}} \\
     scenario\_comparison.json & \texttt{\{scenario: \{label, agents: \{type: \{label, metrics\}\}\}\}} \\
-    intersection\_meta.json & Array of \texttt{\{id, row, col, base\_volume\}} \\
+    intersection\_meta.json & Array of \texttt{\{id, name, row, col, base\_volume\}} \\
     \bottomrule
 \end{longtable}
 
@@ -869,6 +948,10 @@ This project demonstrates that multi-agent reinforcement learning can significan
     \item \label{ref:wsm} Fishburn, P.C. (1967). Additive Utilities with Incomplete Product Sets: Application to Priorities and Assignments. \textit{Operations Research}, 15(3), 537--542.
     \item \label{ref:traffic_rl} Wei, H. et al. (2018). IntelliLight: A Reinforcement Learning Approach for Intelligent Traffic Light Control. \textit{KDD}, 2496--2505.
     \item \label{ref:dubai_rta} Roads and Transport Authority, Dubai. (2025). Public Transport Statistics and Datasets. \url{https://www.rta.ae}
+    \item \label{ref:aitraffic} Wairagade, A., Ugale, K., and Waghmare, R. (2025). AI-Powered Smart Traffic Management System for Urban Congestion Reduction. \textit{International Journal of Scientific Research \& Engineering Trends}, 11(2), 1997--2001.
+    \item \label{ref:marlin} El-Tantawy, S. and Abdulhai, B. (2012). Multiagent Reinforcement Learning for Integrated Network of Adaptive Traffic Signal Controllers (MARLIN-ATSC). \textit{IEEE Trans. Intell. Transp. Syst.}, 14(3), 1140--1150.
+    \item \label{ref:iottraffic} ``A IoT-based Smart Traffic Management System,'' arXiv preprint arXiv:2502.02821, 2025.
+    \item \label{ref:deeplearning_traffic} ``Deep Learning-Based Smart Traffic Management Using Video Analytics,'' \textit{Soft Computing}, 28(5), 1--15, 2024.
 \end{enumerate}
 
 \end{document}

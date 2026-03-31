@@ -148,14 +148,20 @@ The environment consists of a \textbf{4$\times$4 grid} of 16 signalized intersec
 
 \subsection{State Space}
 
-Each intersection's state is a tuple $(q_{NS}, q_{EW}, \phi)$ where:
+Each intersection's state is a tuple $(q_{NS}, q_{EW}, \phi, p_{\text{neighbor}})$ where:
 \begin{itemize}[nosep]
     \item $q_{NS} \in \{0, 1, 2, 3, 4\}$ --- discretized North--South queue length (bins of 5 vehicles)
     \item $q_{EW} \in \{0, 1, 2, 3, 4\}$ --- discretized East--West queue length
     \item $\phi \in \{0, 1\}$ --- current signal phase (0 = NS green, 1 = EW green)
+    \item $p_{\text{neighbor}} \in \{0, 1, 2\}$ --- discretized average queue of adjacent intersections (low/medium/high)
 \end{itemize}
 
-Total state space per intersection: $5 \times 5 \times 2 = 50$ states.
+The neighbor pressure provides each agent with awareness of upstream congestion:
+\begin{equation}
+    p_{\text{neighbor}} = \text{discretize}\left(\frac{1}{|\mathcal{N}_i|} \sum_{j \in \mathcal{N}_i} (q_j^{NS} + q_j^{EW})\right)
+\end{equation}
+
+Total state space per intersection: $5 \times 5 \times 2 \times 3 = 150$ states. This expanded state gives RL agents an information advantage over Fixed Timer.
 
 \subsection{Action Space}
 
@@ -180,17 +186,16 @@ Constraints: minimum green time of 10 steps before switching is allowed; yellow 
 
 \subsection{Reward Function}
 
-The reward for intersection $i$ at step $t$ is:
+The reward for intersection $i$ at step $t$ uses \textbf{per-step deltas} for a meaningful learning signal:
 \begin{equation}
-    R_i^t = -0.1(q_{NS} + q_{EW}) + 0.05 \cdot V_{\text{passed}} - 0.5 \cdot E - 2.0 \cdot M - 0.05 \cdot |q_{NS} - q_{EW}|
+    R_i^t = 0.3(q^{t-1} - q^t) - 0.05 \cdot q^t + 0.4 \cdot v_{\text{served}}^t - 1.0 \cdot e^t - 0.08 \cdot |q_{NS} - q_{EW}| + P_{\text{switch}}
 \end{equation}
 where:
 \begin{itemize}[nosep]
-    \item $q_{NS}, q_{EW}$ are current queue lengths (penalty for waiting vehicles)
-    \item $V_{\text{passed}}$ is cumulative vehicles passed (throughput reward)
-    \item $E$ is cumulative CO$_2$ emissions (kg), computed as $0.002 \times \text{idle vehicles}$ per step
-    \item $M$ is count of near-miss incidents (safety penalty)
-    \item $|q_{NS} - q_{EW}|$ is queue imbalance (balance penalty)
+    \item $q^{t-1} - q^t$ is the queue reduction (positive = reduced)
+    \item $v_{\text{served}}^t$ is per-step throughput (vehicles served this step)
+    \item $e^t = 0.002 \times (q_{NS} + q_{EW})$ is per-step CO$_2$ emissions
+    \item $P_{\text{switch}} = -0.5$ if green duration $< 8$ steps, else 0
 \end{itemize}
 
 %=============================================================================
@@ -324,12 +329,15 @@ All synthetic datasets are calibrated to real Dubai transport statistics with:
 \subsection{Dashboard Pages / Sections}
 
 \begin{enumerate}[nosep]
-    \item \textbf{Overview}: Key metrics summary, scenario selector, real-time simulation status
-    \item \textbf{Live Simulation}: Animated 4$\times$4 grid showing intersection states, queue lengths, signal phases, and agent actions in real time
-    \item \textbf{Training Curves}: Episode-by-episode learning curves for reward, wait time, throughput, emissions per agent and scenario
-    \item \textbf{Scenario Comparison}: Bar charts comparing Fixed-Timer, Q-Learning, and SARSA across all five scenarios
-    \item \textbf{MCDM Analysis}: WSM and TOPSIS scores, ranking tables, radar charts visualizing trade-offs, sensitivity analysis plots
-    \item \textbf{Data Explorer}: Summary statistics from synthetic + real datasets with interactive filtering
+    \item \textbf{Overview}: Key metrics summary with improvement percentages, scenario selector, \textbf{Business Impact / Economic Analysis} panel (AED value of time savings, fuel reduction, CO$_2$ reduction using Dubai-specific parameters)
+    \item \textbf{Live Simulation}: SVG-rendered 4$\times$4 Dubai road network with zone labels (Deira, Downtown, Jumeirah, South Dubai), intersection congestion coloring, proportional queue bars, play/pause/step controls. Includes:
+    \begin{itemize}[nosep]
+        \item \textbf{XAI Decision Logic Panel}: Real Q-values, confidence \%, human-readable reasoning per intersection
+        \item \textbf{Chaos Mode}: Sandstorm (capacity $-45\%$), Sensor Failure (fault indicators), Emergency Vehicle (signal preemption)
+    \end{itemize}
+    \item \textbf{Training Curves}: Area charts with gradient fills for reward, wait time, throughput, emissions per agent and scenario. Epsilon decay visualization
+    \item \textbf{Scenario Comparison}: Color-coded heatmap with improvement percentages comparing all 15 experiments
+    \item \textbf{MCDM Analysis}: WSM and TOPSIS scores, ranking tables, sensitivity analysis plots, \textbf{data export} (CSV/JSON download)
 \end{enumerate}
 
 %=============================================================================
@@ -361,9 +369,9 @@ The simulation exports the following JSON files consumed by the dashboard:
     \midrule
     training\_results.json & Training history (rewards, wait times, throughput, emissions, safety, epsilon) per agent per scenario \\
     mcdm\_results.json & WSM scores, TOPSIS scores, rankings, sensitivity analysis per scenario \\
-    live\_simulation\_*.json & Per-step grid state, metrics, actions, and rewards (3 files: one per agent type) \\
+    live\_simulation\_*.json & Per-step grid state, metrics, actions, rewards, and \textbf{Q-values} for XAI (3 files: one per agent type) \\
     scenario\_comparison.json & Summary metrics for all agent--scenario combinations \\
-    intersection\_meta.json & Intersection IDs, grid positions, base traffic volumes \\
+    intersection\_meta.json & Intersection IDs, names, grid positions, base traffic volumes \\
     \bottomrule
 \end{longtable}
 
