@@ -1,151 +1,97 @@
 import { useState } from "react"
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
-  AreaChart, Area,
-} from "recharts"
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, Area, AreaChart } from "recharts"
 
-const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
-const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
-const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const ttStyle = { background: "#1a1a1e", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#fafafa", fontSize: 11 }
-
-const METRICS = [
-  { key: "episode_rewards", label: "Cumulative Reward", yLabel: "Reward", color: "#06B6D4" },
-  { key: "avg_wait_times", label: "Avg Wait Time", yLabel: "Wait (steps)", color: "#F59E0B" },
-  { key: "throughputs", label: "Throughput", yLabel: "Vehicles", color: "#10B981" },
-  { key: "emissions", label: "Emissions", yLabel: "kg CO\u2082", color: "#EF4444" },
-  { key: "safety_scores", label: "Safety Score", yLabel: "Score", color: "#8B5CF6" },
-]
+const SCENARIOS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
+const AGENTS = { q_learning: { label: "Q-Learning", color: "#3B82F6" }, sarsa: { label: "SARSA", color: "#10B981" } }
+const METRICS = { rewards: "Cumulative Reward", avg_wait: "Avg Wait Time", avg_throughput: "Avg Throughput", epsilon: "Exploration Rate (ε)" }
+const ttStyle = { background: "#1e1e21", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, color: "#f4f4f5" }
 
 export default function TrainingCurves({ data }) {
-  const training = data.training_results
+  const results = data.training_results
   const [scenario, setScenario] = useState("rush_hour")
-  const [metric, setMetric] = useState("episode_rewards")
+  const [metric, setMetric] = useState("rewards")
 
-  if (!training) return <p style={{ color: "var(--text-label)" }}>No training data available</p>
+  if (!results) return <p style={{ color: "var(--text-tertiary)" }}>No training data</p>
 
-  const scData = training[scenario]
-  if (!scData) return <p style={{ color: "var(--text-label)" }}>No data for this scenario</p>
-
-  // Build chart data
-  const numEpisodes = scData.fixed_timer?.history?.episode_rewards?.length || 0
-  const chartData = []
-  for (let i = 0; i < numEpisodes; i++) {
+  const scenarioData = results[scenario] || {}
+  const episodes = scenarioData.q_learning?.episodes || scenarioData.sarsa?.episodes || []
+  const chartData = episodes.map((_, i) => {
     const point = { episode: i + 1 }
-    for (const ag of ["fixed_timer", "q_learning", "sarsa"]) {
-      if (scData[ag]?.history?.[metric]) {
-        point[AGENT_LABELS[ag]] = scData[ag].history[metric][i]
+    Object.entries(AGENTS).forEach(([key, a]) => {
+      const agentData = scenarioData[key]
+      if (agentData) {
+        if (metric === "rewards") point[a.label] = agentData.rewards?.[i]
+        else if (metric === "avg_wait") point[a.label] = agentData.avg_wait?.[i]
+        else if (metric === "avg_throughput") point[a.label] = agentData.avg_throughput?.[i]
+        else if (metric === "epsilon") point[a.label] = agentData.epsilon?.[i]
       }
-    }
-    chartData.push(point)
-  }
-
-  // Epsilon data
-  const epsilonData = []
-  for (let i = 0; i < numEpisodes; i++) {
-    const pt = { episode: i + 1 }
-    for (const ag of ["q_learning", "sarsa"]) {
-      if (scData[ag]?.history?.epsilons) pt[AGENT_LABELS[ag]] = scData[ag].history.epsilons[i]
-    }
-    epsilonData.push(pt)
-  }
-
-  const metricInfo = METRICS.find(m => m.key === metric) || METRICS[0]
-
-  // Final metrics table
-  const finalMetrics = Object.entries(scData).map(([ag, d]) => ({
-    agent: AGENT_LABELS[ag],
-    color: AGENT_COLORS[ag],
-    reward: d.final_metrics.avg_reward,
-    wait: d.final_metrics.avg_wait_time,
-    throughput: d.final_metrics.avg_throughput,
-    emissions: d.final_metrics.avg_emissions,
-    safety: d.final_metrics.avg_safety_score,
-  }))
+    })
+    return point
+  })
 
   return (
-    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Controls */}
-      <div className="card" style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: "var(--text-label)", fontWeight: 600 }}>Scenario:</span>
-        {Object.entries(SC_LABELS).map(([k, v]) => (
-          <button key={k} className={`btn btn-sm ${scenario === k ? "btn-outline active" : "btn-outline"}`}
-            onClick={() => setScenario(k)}>{v}</button>
-        ))}
-        <div style={{ width: 1, height: 20, background: "var(--border-medium)", margin: "0 4px" }} />
-        <span style={{ fontSize: 11, color: "var(--text-label)", fontWeight: 600 }}>Metric:</span>
-        {METRICS.map(m => (
-          <button key={m.key} className={`btn btn-sm ${metric === m.key ? "btn-outline active" : "btn-outline"}`}
-            onClick={() => setMetric(m.key)}>{m.label}</button>
-        ))}
+    <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 4 }}>
+          {Object.entries(SCENARIOS).map(([k, v]) => (
+            <button key={k} onClick={() => setScenario(k)} className={`btn btn-sm ${scenario === k ? "btn-outline active" : "btn-outline"}`}>{v}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {Object.entries(METRICS).map(([k, v]) => (
+            <button key={k} onClick={() => setMetric(k)} className={`btn btn-sm ${metric === k ? "btn-outline active" : "btn-outline"}`}>{v}</button>
+          ))}
+        </div>
       </div>
 
-      {/* Main Chart */}
       <div className="card">
         <div className="section-title">
-          <span className="dot" style={{ background: metricInfo.color }} />
-          {metricInfo.label} {"\u2014"} {SC_LABELS[scenario]} ({numEpisodes} Episodes)
+          <span className="section-dot" style={{ background: "var(--amber)" }} />
+          {METRICS[metric]} — {SCENARIOS[scenario]}
         </div>
-        <ResponsiveContainer width="100%" height={320}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="episode" tick={{ fill: "#a1a1aa", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: "Episode", position: "insideBottom", offset: -5, fill: "#71717a", fontSize: 10 }} />
-            <YAxis tick={{ fill: "#a1a1aa", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: metricInfo.yLabel, angle: -90, position: "insideLeft", fill: "#71717a", fontSize: 10 }} />
+        <ResponsiveContainer width="100%" height={400}>
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
+                <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="episode" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: "Episode", position: "insideBottom", offset: -5, fill: "#71717a", fontSize: 11 }} />
+            <YAxis tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={ttStyle} />
-            <Legend wrapperStyle={{ fontSize: 11, color: "#a1a1aa" }} />
-            {Object.entries(AGENT_COLORS).map(([ag, color]) => (
-              <Line key={ag} type="monotone" dataKey={AGENT_LABELS[ag]}
-                stroke={color} strokeWidth={1.5} dot={false} />
-            ))}
-          </LineChart>
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Area type="monotone" dataKey="Q-Learning" stroke="#3B82F6" fill="url(#gradBlue)" strokeWidth={2} dot={false} />
+            <Area type="monotone" dataKey="SARSA" stroke="#10B981" fill="url(#gradGreen)" strokeWidth={2} dot={false} />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Epsilon + Summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div className="card">
-          <div className="section-title">
-            <span className="dot" style={{ background: "var(--gold)" }} />
-            Exploration Rate ({"\u03B5"}-Decay)
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={epsilonData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="episode" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
-              <Tooltip contentStyle={ttStyle} />
-              <Area type="monotone" dataKey="Q-Learning" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} />
-              <Area type="monotone" dataKey="SARSA" stroke="#10B981" fill="#10B981" fillOpacity={0.1} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card">
-          <div className="section-title">
-            <span className="dot" style={{ background: "var(--teal)" }} />
-            Final Performance (Last 50 Episodes)
-          </div>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Agent</th><th style={{ textAlign: "right" }}>Reward</th>
-                <th style={{ textAlign: "right" }}>Wait</th><th style={{ textAlign: "right" }}>Throughput</th>
-                <th style={{ textAlign: "right" }}>Safety</th>
-              </tr>
-            </thead>
-            <tbody>
-              {finalMetrics.map((r, i) => (
-                <tr key={i}>
-                  <td><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: r.color, marginRight: 6 }} />{r.agent}</td>
-                  <td className="mono" style={{ textAlign: "right" }}>{r.reward.toFixed(0)}</td>
-                  <td className="mono" style={{ textAlign: "right" }}>{r.wait.toFixed(0)}</td>
-                  <td className="mono highlight" style={{ textAlign: "right" }}>{r.throughput.toFixed(0)}</td>
-                  <td className="mono" style={{ textAlign: "right" }}>{r.safety.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Summary stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+        {Object.entries(AGENTS).map(([key, a]) => {
+          const ad = scenarioData[key]
+          if (!ad) return null
+          const finalReward = ad.rewards?.[ad.rewards.length - 1]?.toFixed(1)
+          const bestReward = ad.rewards ? Math.max(...ad.rewards).toFixed(1) : "N/A"
+          const finalEps = ad.epsilon?.[ad.epsilon.length - 1]?.toFixed(3)
+          return (
+            <div key={key} className="metric-card" style={{ borderLeft: `3px solid ${a.color}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: a.color, marginBottom: 8 }}>{a.label}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <div><div className="metric-label">Final Reward</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{finalReward}</div></div>
+                <div><div className="metric-label">Best Reward</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{bestReward}</div></div>
+                <div><div className="metric-label">Final ε</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{finalEps}</div></div>
+                <div><div className="metric-label">Episodes</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{ad.episodes?.length || 0}</div></div>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

@@ -1,134 +1,126 @@
-import { useState } from "react"
-import { Download } from "lucide-react"
+import { useState, useMemo } from "react"
+import { Download, Award } from "lucide-react"
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, Cell,
 } from "recharts"
 
-const AGENT_COLORS = { "Fixed Timer": "#EF4444", "Q-Learning": "#3B82F6", "SARSA": "#10B981", "Q-Learning + Bus Priority": "#6366F1", "SARSA + Bus Priority": "#14B8A6" }
-const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const ttStyle = { background: "#1a1a1e", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#fafafa", fontSize: 11 }
-
-function downloadJSON(obj, filename) {
-  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url; a.download = filename; a.click()
-  URL.revokeObjectURL(url)
-}
-
-function downloadCSV(mcdm, scenario) {
-  const results = mcdm[scenario]
-  if (!results) return
-  const alts = results.alternatives || []
-  const wsm = results.wsm || {}
-  const topsis = results.topsis || {}
-  const headers = ["Policy", "WSM Score", "TOPSIS Score", "WSM Rank", "TOPSIS Rank"]
-  const rows = [headers.join(",")]
-  alts.forEach((alt, i) => {
-    rows.push([
-      alt,
-      wsm.scores?.[i]?.toFixed(4),
-      topsis.scores?.[i]?.toFixed(4),
-      (wsm.ranked_alternatives || []).indexOf(alt) + 1,
-      (topsis.ranked_alternatives || []).indexOf(alt) + 1,
-    ].join(","))
-  })
-  const blob = new Blob([rows.join("\n")], { type: "text/csv" })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url; a.download = `mcdm_${scenario}.csv`; a.click()
-  URL.revokeObjectURL(url)
-}
+const SCENARIOS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
+const ALT_COLORS = ["#EF4444", "#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"]
+const CRITERIA_SHORT = ["Efficiency", "Safety", "Emissions", "Public Transport"]
+const ttStyle = { background: "#1e1e21", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, color: "#f4f4f5" }
 
 export default function MCDMAnalysis({ data }) {
   const mcdm = data.mcdm_results
   const [scenario, setScenario] = useState("normal")
 
-  if (!mcdm) return <p style={{ color: "var(--text-label)" }}>No MCDM data available</p>
+  if (!mcdm) return <p style={{ color: "var(--text-tertiary)" }}>No MCDM data available</p>
 
-  const results = mcdm[scenario]
-  if (!results) return <p style={{ color: "var(--text-label)" }}>No results for {scenario}</p>
+  const sc = mcdm[scenario]
+  if (!sc) return <p style={{ color: "var(--text-tertiary)" }}>No data for {scenario}</p>
 
-  const wsmScores = {}
-  const topsisScores = {}
-  const alternatives = results.alternatives || []
-  const wsm = results.wsm || {}
-  const topsis = results.topsis || {}
+  const alternatives = sc.alternatives || []
+  const weights = sc.weights || []
+  const criteria = sc.criteria || []
 
-  // Map array-indexed scores to alternative-keyed dicts
-  alternatives.forEach((alt, i) => {
-    wsmScores[alt] = wsm.scores?.[i] || 0
-    topsisScores[alt] = topsis.scores?.[i] || 0
-  })
+  // WSM data
+  const wsmScores = sc.wsm?.scores || []
+  const wsmRanked = sc.wsm?.ranked_alternatives || []
+  const wsmRankedScores = sc.wsm?.ranked_scores || []
 
-  const wsmRanking = wsm.ranked_alternatives || []
-  const topsisRanking = topsis.ranked_alternatives || []
+  // TOPSIS data
+  const topsisScores = sc.topsis?.scores || []
+  const topsisRanked = sc.topsis?.ranked_alternatives || []
+  const topsisRankedScores = sc.topsis?.ranked_scores || []
 
-  // Weights: array -> dict using criteria names
-  const criteriaKeys = results.criteria || ["efficiency", "safety", "emissions", "public_transport"]
-  const criteriaLabels = { efficiency: "Efficiency", safety: "Safety", emissions: "Emissions", public_transport: "Public Transport" }
-  const weightsArr = results.weights || []
-  const weights = {}
-  criteriaKeys.forEach((c, i) => { weights[c] = weightsArr[i] || 0 })
+  // Normalized matrix for radar
+  const normMatrix = sc.wsm?.normalized_matrix || sc.topsis?.normalized_matrix || []
 
-  const sensitivity = results.sensitivity_analysis || []
-
-  // Radar chart data from WSM normalized matrix (2D array)
-  const normMatrix2D = wsm.normalized_matrix || []
-  const radarData = criteriaKeys.map((c, ci) => {
-    const point = { criterion: criteriaLabels[c] || c }
-    alternatives.forEach((alt, ai) => {
-      let val = normMatrix2D[ai]?.[ci] || 0
-      // For cost criteria, invert for radar (higher = better)
-      if (c === "emissions" || c === "public_transport") val = 1 - val
-      point[alt] = Math.round(val * 100)
+  // Radar chart data
+  const radarData = useMemo(() => {
+    if (!normMatrix.length || !criteria.length) return []
+    return criteria.map((c, ci) => {
+      const point = { criteria: CRITERIA_SHORT[ci] || c }
+      alternatives.forEach((alt, ai) => {
+        point[alt] = normMatrix[ai]?.[ci] != null ? +(normMatrix[ai][ci] * 100).toFixed(1) : 0
+      })
+      return point
     })
-    return point
-  })
+  }, [normMatrix, criteria, alternatives])
 
-  // Score comparison bar chart
-  const scoreData = alternatives.map(p => ({
-    policy: p.length > 15 ? p.substring(0, 14) + "..." : p,
-    fullPolicy: p,
-    WSM: Math.round(wsmScores[p] * 1000) / 1000,
-    TOPSIS: Math.round(topsisScores[p] * 1000) / 1000,
+  // WSM bar data
+  const wsmBarData = wsmRanked.map((alt, i) => ({
+    name: alt,
+    score: +(wsmRankedScores[i] || 0).toFixed(4),
+    fill: ALT_COLORS[alternatives.indexOf(alt) % ALT_COLORS.length],
   }))
 
+  // TOPSIS bar data
+  const topsisBarData = topsisRanked.map((alt, i) => ({
+    name: alt,
+    score: +(topsisRankedScores[i] || 0).toFixed(4),
+    fill: ALT_COLORS[alternatives.indexOf(alt) % ALT_COLORS.length],
+  }))
+
+  // Sensitivity analysis
+  const sensitivity = sc.sensitivity_analysis || {}
+
+  // Download functions
+  function downloadCSV() {
+    let csv = "Alternative,WSM Score,WSM Rank,TOPSIS Score,TOPSIS Rank\n"
+    alternatives.forEach((alt, i) => {
+      const wsmRank = (sc.wsm?.ranking || [])[i]
+      const topsisRank = (sc.topsis?.ranking || [])[i]
+      csv += alt + "," + (wsmScores[i] || 0).toFixed(4) + "," + (wsmRank != null ? wsmRank + 1 : "") + "," + (topsisScores[i] || 0).toFixed(4) + "," + (topsisRank != null ? topsisRank + 1 : "") + "\n"
+    })
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a"); a.href = url; a.download = "mcdm_" + scenario + ".csv"; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function downloadJSON() {
+    const blob = new Blob([JSON.stringify(sc, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a"); a.href = url; a.download = "mcdm_" + scenario + ".json"; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Controls */}
-      <div className="card" style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: "var(--text-label)", fontWeight: 600 }}>Scenario:</span>
-        {Object.entries(SC_LABELS).map(([k, v]) => (
-          <button key={k} className={`btn btn-sm ${scenario === k ? "btn-outline active" : "btn-outline"}`}
-            onClick={() => setScenario(k)}>{v}</button>
-        ))}
-        <div style={{ flex: 1 }} />
-        <button className="btn btn-sm btn-outline" onClick={() => downloadCSV(mcdm, scenario)}>
-          <Download size={12} /> Export CSV
-        </button>
-        <button className="btn btn-sm btn-outline" onClick={() => downloadJSON(results, `mcdm_${scenario}.json`)}>
-          <Download size={12} /> Export JSON
-        </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>Scenario:</span>
+          <div style={{ display: "flex", gap: 4 }}>
+            {Object.entries(SCENARIOS).map(([k, v]) => (
+              <button key={k} onClick={() => setScenario(k)}
+                className={"btn btn-sm " + (scenario === k ? "btn-outline active" : "btn-outline")}>{v}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={downloadCSV} className="btn btn-sm btn-outline"><Download size={12} /> Export CSV</button>
+          <button onClick={downloadJSON} className="btn btn-sm btn-outline"><Download size={12} /> Export JSON</button>
+        </div>
       </div>
 
-      {/* Weights + Rankings */}
+      {/* Top row: Weights + WSM + TOPSIS */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
         {/* Criteria Weights */}
         <div className="card">
           <div className="section-title">
-            <span className="dot" style={{ background: "var(--cyan)" }} />
+            <span className="section-dot" style={{ background: "var(--amber)" }} />
             Criteria Weights
           </div>
-          {Object.entries(weights).map(([c, w]) => (
-            <div key={c} style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{criteriaLabels[c] || c}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>{(w * 100).toFixed(0)}%</span>
+          {weights.map((w, i) => (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                <span style={{ color: "var(--text-secondary)" }}>{CRITERIA_SHORT[i] || criteria[i]}</span>
+                <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{(w * 100).toFixed(0)}%</span>
               </div>
-              <div style={{ height: 5, borderRadius: 3, background: "var(--bg-elevated)" }}>
-                <div style={{ height: "100%", borderRadius: 3, width: `${w * 100}%`, background: "var(--teal)" }} />
+              <div style={{ height: 6, background: "var(--bg-elevated)", borderRadius: 4 }}>
+                <div style={{ width: (w * 100) + "%", height: "100%", background: ALT_COLORS[i % ALT_COLORS.length], borderRadius: 4, transition: "width 0.3s" }} />
               </div>
             </div>
           ))}
@@ -137,133 +129,141 @@ export default function MCDMAnalysis({ data }) {
         {/* WSM Ranking */}
         <div className="card">
           <div className="section-title">
-            <span className="dot" style={{ background: "var(--blue)" }} />
+            <span className="section-dot" style={{ background: "var(--blue)" }} />
             WSM Ranking
           </div>
-          {wsmRanking.map((p, i) => (
-            <div key={p} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-              background: i === 0 ? "rgba(0,212,255,0.06)" : "transparent",
-              borderRadius: 8, marginBottom: 4,
-              border: i === 0 ? "1px solid rgba(0,212,255,0.15)" : "1px solid transparent"
-            }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: i === 0 ? "var(--cyan)" : "var(--text-muted)", width: 22 }}>#{i + 1}</span>
-              <span style={{ flex: 1, fontSize: 12, color: i === 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>{p}</span>
-              <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 700, color: AGENT_COLORS[p] || "var(--text-label)" }}>
-                {wsmScores[p]?.toFixed(3)}
-              </span>
-            </div>
-          ))}
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={wsmBarData} layout="vertical" barSize={16}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis type="number" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+              <YAxis type="category" dataKey="name" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} width={100} />
+              <Tooltip contentStyle={ttStyle} />
+              <Bar dataKey="score" radius={[0,4,4,0]}>
+                {wsmBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ marginTop: 8 }}>
+            {wsmRanked.slice(0, 1).map(alt => (
+              <div key={alt} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, background: "var(--green-dim)" }}>
+                <Award size={12} style={{ color: "var(--green)" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--green)" }}>#1 {alt}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* TOPSIS Ranking */}
         <div className="card">
           <div className="section-title">
-            <span className="dot" style={{ background: "var(--purple)" }} />
+            <span className="section-dot" style={{ background: "var(--violet)" }} />
             TOPSIS Ranking
           </div>
-          {topsisRanking.map((p, i) => (
-            <div key={p} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-              background: i === 0 ? "rgba(0,212,255,0.06)" : "transparent",
-              borderRadius: 8, marginBottom: 4,
-              border: i === 0 ? "1px solid rgba(0,212,255,0.15)" : "1px solid transparent"
-            }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: i === 0 ? "var(--cyan)" : "var(--text-muted)", width: 22 }}>#{i + 1}</span>
-              <span style={{ flex: 1, fontSize: 12, color: i === 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>{p}</span>
-              <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 700, color: AGENT_COLORS[p] || "var(--text-label)" }}>
-                {topsisScores[p]?.toFixed(3)}
-              </span>
-            </div>
-          ))}
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={topsisBarData} layout="vertical" barSize={16}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis type="number" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+              <YAxis type="category" dataKey="name" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} width={100} />
+              <Tooltip contentStyle={ttStyle} />
+              <Bar dataKey="score" radius={[0,4,4,0]}>
+                {topsisBarData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ marginTop: 8 }}>
+            {topsisRanked.slice(0, 1).map(alt => (
+              <div key={alt} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, background: "var(--green-dim)" }}>
+                <Award size={12} style={{ color: "var(--green)" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--green)" }}>#1 {alt}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Radar + Scores Charts */}
+      {/* Bottom row: Radar + Comparison */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {/* Radar Chart */}
         <div className="card">
           <div className="section-title">
-            <span className="dot" style={{ background: "var(--teal)" }} />
+            <span className="section-dot" style={{ background: "var(--green)" }} />
             Multi-Criteria Profile (Normalized)
           </div>
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={radarData}>
               <PolarGrid stroke="rgba(255,255,255,0.06)" />
-              <PolarAngleAxis dataKey="criterion" tick={{ fill: "#a1a1aa", fontSize: 10 }} />
+              <PolarAngleAxis dataKey="criteria" tick={{ fill: "#a1a1aa", fontSize: 10 }} />
               <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
-              {alternatives.map(p => (
-                <Radar key={p} name={p} dataKey={p}
-                  stroke={AGENT_COLORS[p] || "#71717a"} fill={AGENT_COLORS[p] || "#71717a"} fillOpacity={0.08} strokeWidth={1.5} />
+              {alternatives.map((alt, i) => (
+                <Radar key={alt} name={alt} dataKey={alt}
+                  stroke={ALT_COLORS[i % ALT_COLORS.length]}
+                  fill={ALT_COLORS[i % ALT_COLORS.length]}
+                  fillOpacity={0.08} strokeWidth={2} />
               ))}
+              <Legend wrapperStyle={{ fontSize: 10, color: "#a1a1aa" }} />
             </RadarChart>
           </ResponsiveContainer>
         </div>
 
+        {/* WSM vs TOPSIS Score Comparison */}
         <div className="card">
           <div className="section-title">
-            <span className="dot" style={{ background: "var(--green)" }} />
+            <span className="section-dot" style={{ background: "var(--teal)" }} />
             WSM vs TOPSIS Scores
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={scoreData} barGap={3}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="policy" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
-              <YAxis tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={alternatives.map((alt, i) => ({
+              name: alt,
+              WSM: +(wsmScores[i] || 0).toFixed(4),
+              TOPSIS: +(topsisScores[i] || 0).toFixed(4),
+            }))} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis dataKey="name" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} angle={-15} textAnchor="end" height={50} />
+              <YAxis tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 1]} />
               <Tooltip contentStyle={ttStyle} />
-              <Bar dataKey="WSM" fill="#3B82F6" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="TOPSIS" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Bar dataKey="WSM" fill="#3B82F6" radius={[4,4,0,0]} />
+              <Bar dataKey="TOPSIS" fill="#8B5CF6" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Sensitivity Analysis */}
-      {sensitivity.length > 0 && (
-        <div className="card">
-          <div className="section-title">
-            <span className="dot" style={{ background: "var(--purple)" }} />
-            Sensitivity Analysis (Weight Variations)
-          </div>
-          <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 14 }}>
-            Each criterion weight is varied from -15% to +15% while other weights are redistributed proportionally. Shows how sensitive the ranking is to weight changes.
-          </p>
+      <div className="card">
+        <div className="section-title">
+          <span className="section-dot" style={{ background: "var(--blue)" }} />
+          Sensitivity Analysis (Weight Variations)
+        </div>
+        {Object.keys(sensitivity).length > 0 ? (
           <div style={{ overflowX: "auto" }}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Criterion</th>
-                  <th style={{ textAlign: "center" }}>Base Weight</th>
-                  <th style={{ textAlign: "center" }}>Weight -15%</th>
-                  <th>WSM Winner</th>
-                  <th>TOPSIS Winner</th>
-                  <th style={{ textAlign: "center" }}>Weight +15%</th>
+                  <th>Weight Set</th>
+                  {CRITERIA_SHORT.map(c => <th key={c}>{c}</th>)}
                   <th>WSM Winner</th>
                   <th>TOPSIS Winner</th>
                 </tr>
               </thead>
               <tbody>
-                {sensitivity.map((s, i) => {
-                  const low = s.variations?.[0]
-                  const high = s.variations?.[s.variations.length - 1]
-                  const baseW = weightsArr[i] || 0
-                  return (
-                    <tr key={i}>
-                      <td className="highlight">{criteriaLabels[s.criterion] || s.criterion}</td>
-                      <td className="mono" style={{ textAlign: "center" }}>{(baseW * 100).toFixed(0)}%</td>
-                      <td className="mono" style={{ textAlign: "center" }}>{low ? (low.modified_weight * 100).toFixed(0) + "%" : "-"}</td>
-                      <td><span className="badge-blue">{low ? alternatives[low.wsm_ranking?.[0]] || "-" : "-"}</span></td>
-                      <td><span className="badge-purple">{low ? alternatives[low.topsis_ranking?.[0]] || "-" : "-"}</span></td>
-                      <td className="mono" style={{ textAlign: "center" }}>{high ? (high.modified_weight * 100).toFixed(0) + "%" : "-"}</td>
-                      <td><span className="badge-blue">{high ? alternatives[high.wsm_ranking?.[0]] || "-" : "-"}</span></td>
-                      <td><span className="badge-purple">{high ? alternatives[high.topsis_ranking?.[0]] || "-" : "-"}</span></td>
-                    </tr>
-                  )
-                })}
+                {Object.entries(sensitivity).map(([key, val]) => (
+                  <tr key={key}>
+                    <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{key.replace(/_/g, " ").replace("emphasis", "Emphasis")}</td>
+                    {(val.weights || []).map((w, i) => (
+                      <td key={i} className="mono">{(w * 100).toFixed(0)}%</td>
+                    ))}
+                    <td style={{ color: "var(--blue)", fontWeight: 600, fontSize: 11 }}>{val.wsm_winner || "N/A"}</td>
+                    <td style={{ color: "var(--violet)", fontWeight: 600, fontSize: 11 }}>{val.topsis_winner || "N/A"}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No sensitivity data available for this scenario</p>
+        )}
+      </div>
     </div>
   )
 }
