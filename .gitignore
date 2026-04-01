@@ -20,8 +20,5 @@ Thumbs.db
 # Build script (temporary)
 _build_dashboard.py
 
-# Large synthetic data (regenerate with: python main.py)
-Datasets/synthetic/vehicle_detections.csv
-
 # PDF research papers
 *.pdf

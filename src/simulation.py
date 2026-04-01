@@ -230,7 +230,7 @@ class SimulationRunner:
                 "throughput": metrics["avg_throughput"],
                 "safety_score": metrics["avg_safety_score"],
                 "emissions": metrics["avg_emissions"],
-                "bus_delay": metrics.get("avg_bus_delay", metrics["avg_wait_time"] * 0.9)
+                "bus_delay": metrics["avg_bus_delay"]
             }
 
         # Also add bus-priority variants for RL agents
@@ -244,7 +244,7 @@ class SimulationRunner:
                         "throughput": bp_metrics["avg_throughput"],
                         "safety_score": bp_metrics["avg_safety_score"],
                         "emissions": bp_metrics["avg_emissions"],
-                        "bus_delay": bp_metrics.get("avg_bus_delay", bp_metrics["avg_wait_time"] * 0.7)
+                        "bus_delay": bp_metrics["avg_bus_delay"]
                     }
 
         return evaluate_policies(policy_results)

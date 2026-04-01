@@ -57,12 +57,17 @@ export default function Overview({ data }) {
   ]
 
   // Economic calculations — grounded in realistic Dubai data
-  // Wait reduction: (Fixed - RL) steps over episode, each step = 30s sim time
-  // Per intersection: avg wait saved per vehicle (seconds)
-  const waitSavedPerVehicle = ((ftW - bestRLW) / 16) * 0.5  // seconds per vehicle at each intersection
+  // avg_wait_time is cumulative queue-steps across 200 steps (total wait = sum of queue each step)
+  // Each step = 30 seconds simulated time. Per-vehicle wait = total_wait / throughput (seconds)
+  const ftTPVal = rush.fixed_timer?.metrics?.avg_throughput || 1
+  const rlTPVal = rush.q_learning?.metrics?.avg_throughput || rush.sarsa?.metrics?.avg_throughput || 1
+  // Per-vehicle wait time in seconds: (cumulative_wait / num_vehicles_passed) * 30s/step
+  const ftWaitPerVeh = (ftW / ftTPVal) * 30   // seconds per vehicle
+  const rlWaitPerVeh = (bestRLW / rlTPVal) * 30  // seconds per vehicle
+  const waitSavedPerVehicle = Math.max(0, ftWaitPerVeh - rlWaitPerVeh)  // seconds saved per vehicle
   // Dubai: ~1,800 vehicles/hour through major intersection, 4 peak hours/day
   const vehPerIntersectionDay = 1800 * 4
-  // Value of Time: Dubai avg ~AED 50/hour = AED 0.014/second (per RTA 2024 VoT study)
+  // Value of Time: Dubai avg salary AED 16,775/month = AED 50.3/hr = AED 0.014/sec
   const dailyVoTPerInt = waitSavedPerVehicle * vehPerIntersectionDay * 0.014
   // Fuel: idle consumption ~0.6L/hour, saved per vehicle = waitSaved(sec)/3600 * 0.6L
   const fuelSavedPerVehicle = (waitSavedPerVehicle / 3600) * 0.6
@@ -88,11 +93,16 @@ export default function Overview({ data }) {
   }))
 
   const norm = cmp.normal?.agents || {}
+  // Dynamic scaling: use actual data range instead of hardcoded values
+  const normEntries = Object.entries(norm)
+  const maxTP = Math.max(...normEntries.map(([,d]) => d.metrics.avg_throughput), 1)
+  const maxWait = Math.max(...normEntries.map(([,d]) => d.metrics.avg_wait_time), 1)
+  const maxEmit = Math.max(...normEntries.map(([,d]) => d.metrics.avg_emissions), 1)
   const radarData = [
-    { metric: "Throughput", ...Object.fromEntries(Object.entries(norm).map(([a,d]) => [AGENT_LABELS[a], Math.min(100,(d.metrics.avg_throughput/6000)*100)])) },
-    { metric: "Low Wait", ...Object.fromEntries(Object.entries(norm).map(([a,d]) => [AGENT_LABELS[a], Math.max(0,100-d.metrics.avg_wait_time/80)])) },
-    { metric: "Safety", ...Object.fromEntries(Object.entries(norm).map(([a,d]) => [AGENT_LABELS[a], d.metrics.avg_safety_score])) },
-    { metric: "Low Emissions", ...Object.fromEntries(Object.entries(norm).map(([a,d]) => [AGENT_LABELS[a], Math.max(0,100-d.metrics.avg_emissions)])) },
+    { metric: "Throughput", ...Object.fromEntries(normEntries.map(([a,d]) => [AGENT_LABELS[a], (d.metrics.avg_throughput / maxTP) * 100])) },
+    { metric: "Low Wait", ...Object.fromEntries(normEntries.map(([a,d]) => [AGENT_LABELS[a], (1 - d.metrics.avg_wait_time / maxWait) * 100 + 20])) },
+    { metric: "Safety", ...Object.fromEntries(normEntries.map(([a,d]) => [AGENT_LABELS[a], d.metrics.avg_safety_score])) },
+    { metric: "Low Emissions", ...Object.fromEntries(normEntries.map(([a,d]) => [AGENT_LABELS[a], (1 - d.metrics.avg_emissions / maxEmit) * 100 + 20])) },
   ]
 
   return (

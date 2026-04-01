@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from src.generate_synthetic import main as generate_synthetic_data
 from src.simulation import SimulationRunner
+from src.run_simulation import validate_datasets
 
 
 def main():
@@ -20,11 +21,15 @@ def main():
     print("=" * 70)
 
     # Step 1: Generate synthetic datasets
-    print("\n[1/4] Generating synthetic datasets...")
+    print("\n[1/5] Generating synthetic datasets...")
     generate_synthetic_data()
 
-    # Step 2: Run simulation experiments
-    print("\n[2/4] Running RL simulation experiments...")
+    # Step 2: Validate generated datasets
+    print("\n[2/5] Validating synthetic datasets...")
+    validate_datasets()
+
+    # Step 3: Run simulation experiments
+    print("\n[3/5] Running RL simulation experiments...")
     print("  (Training Q-Learning, SARSA, and Fixed-Timer across 5 scenarios)")
     print("  This may take a few minutes...\n")
 
@@ -38,14 +43,14 @@ def main():
     elapsed = time.time() - start_time
     print(f"\n  Simulation completed in {elapsed:.1f} seconds")
 
-    # Step 3: Export results for dashboard
-    print("\n[3/4] Exporting results for dashboard...")
+    # Step 4: Export results for dashboard
+    print("\n[4/5] Exporting results for dashboard...")
     dashboard_data_dir = os.path.join(os.path.dirname(__file__),
                                        "dashboard", "public", "data")
     runner.export_results(dashboard_data_dir)
 
-    # Step 4: Print summary
-    print("\n[4/4] Summary of Results")
+    # Step 5: Print summary
+    print("\n[5/5] Summary of Results")
     print("=" * 70)
 
     for scenario in runner.SCENARIOS:

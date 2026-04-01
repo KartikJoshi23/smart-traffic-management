@@ -311,7 +311,7 @@ def main():
     intersection_traffic.to_csv(os.path.join(OUTPUT_DIR, "intersection_traffic.csv"), index=False)
     print(f"  -> intersection_traffic.csv: {len(intersection_traffic)} records")
 
-    vehicle_detections = generate_vehicle_detections(days=30)
+    vehicle_detections = generate_vehicle_detections(days=7)
     vehicle_detections.to_csv(os.path.join(OUTPUT_DIR, "vehicle_detections.csv"), index=False)
     print(f"  -> vehicle_detections.csv: {len(vehicle_detections)} records")
 
