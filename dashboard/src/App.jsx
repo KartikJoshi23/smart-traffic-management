@@ -42,12 +42,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bg-page)" }}>
-      <div style={{ height: 3, background: "linear-gradient(90deg, #EF4444 0%, #F59E0B 30%, #10B981 60%, #06B6D4 100%)" }} />
+      <div className="accent-bar" />
 
       <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, var(--teal-dim), var(--blue-dim))", border: "1px solid var(--border-medium)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, var(--gold-dim), var(--bg-elevated))", border: "1px solid var(--border-medium)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
               {"🚦"}
             </div>
             <div>

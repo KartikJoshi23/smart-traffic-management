@@ -16,7 +16,7 @@ const AGENT_META = {
 }
 const ACTION_NAMES = ["HOLD", "SWITCH", "EXTEND"]
 const ACTION_COLORS = ["#06B6D4", "#F59E0B", "#8B5CF6"]
-const ttStyle = { background: "#0C1220", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 10, color: "#F1F5F9", fontSize: 11 }
+const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4", fontSize: 11 }
 
 function getCongestion(qNS, qEW) {
   const t = qNS + qEW
@@ -125,7 +125,7 @@ export default function LiveSimulation({ data }) {
           {Object.entries(AGENT_META).map(([k, v]) => (
             <button key={k} onClick={() => { setAgentType(k); setStep(0); setPlaying(false) }}
               className={`btn btn-sm ${agentType === k ? "" : "btn-outline"}`}
-              style={agentType === k ? { background: v.color, color: "#0C1220", fontWeight: 700, border: "none" } : {}}>
+              style={agentType === k ? { background: v.color, color: "#19191c", fontWeight: 700, border: "none" } : {}}>
               {v.label}
             </button>
           ))}
@@ -159,17 +159,17 @@ export default function LiveSimulation({ data }) {
         <div style={{ display: "flex", gap: 5 }}>
           <button className={`btn btn-sm ${chaos.sandstorm ? "btn-outline active" : "btn-outline"}`}
             onClick={() => setChaos(c => ({ ...c, sandstorm: !c.sandstorm }))}
-            style={chaos.sandstorm ? { background: "var(--gold-dim)", borderColor: "#F59E0B", color: "#F59E0B" } : {}}>
+            style={chaos.sandstorm ? { background: "var(--amber-dim)", borderColor: "var(--amber)", color: "var(--amber)" } : {}}>
             <CloudRain size={12} /> Sandstorm
           </button>
           <button className={`btn btn-sm ${chaos.sensorFail ? "btn-outline active" : "btn-outline"}`}
             onClick={() => setChaos(c => ({ ...c, sensorFail: !c.sensorFail }))}
-            style={chaos.sensorFail ? { background: "var(--red-dim)", borderColor: "#EF4444", color: "#EF4444" } : {}}>
+            style={chaos.sensorFail ? { background: "var(--coral-dim)", borderColor: "var(--coral)", color: "var(--coral)" } : {}}>
             <AlertTriangle size={12} /> Sensor Fail
           </button>
           <button className={`btn btn-sm ${chaos.emergency ? "btn-outline active" : "btn-outline"}`}
             onClick={() => setChaos(c => ({ ...c, emergency: !c.emergency }))}
-            style={chaos.emergency ? { background: "var(--blue-dim)", borderColor: "#3B82F6", color: "#3B82F6" } : {}}>
+            style={chaos.emergency ? { background: "var(--sky-dim)", borderColor: "var(--sky)", color: "var(--sky)" } : {}}>
             <Ambulance size={12} /> Emergency
           </button>
         </div>
@@ -179,7 +179,7 @@ export default function LiveSimulation({ data }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 14 }}>
         {/* SVG Traffic Grid */}
         <div className="card" style={{ padding: 16, position: "relative" }}>
-          {chaos.sandstorm && <div style={{ position: "absolute", inset: 0, background: "rgba(245,158,11,0.06)", borderRadius: 14, zIndex: 1, pointerEvents: "none" }} />}
+          {chaos.sandstorm && <div style={{ position: "absolute", inset: 0, background: "rgba(251,191,36,0.06)", borderRadius: 14, zIndex: 1, pointerEvents: "none" }} />}
           <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
             <defs>
               <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
@@ -187,21 +187,21 @@ export default function LiveSimulation({ data }) {
 
             {/* Zone labels */}
             {ZONES.map((z, i) => (
-              <text key={z} x={12} y={pad + i * cellH + cellH / 2} fill="#64748B" fontSize="9" fontWeight="600" textAnchor="start" transform={`rotate(-90, 12, ${pad + i * cellH + cellH / 2})`}>{z}</text>
+              <text key={z} x={12} y={pad + i * cellH + cellH / 2} fill="#78716c" fontSize="9" fontWeight="600" textAnchor="start" transform={`rotate(-90, 12, ${pad + i * cellH + cellH / 2})`}>{z}</text>
             ))}
 
             {/* Roads — horizontal */}
             {[0, 1, 2, 3].map(r => (
               <g key={`hr${r}`}>
-                <rect x={pad - 20} y={pad + r * cellH - 8} width={svgW - 2 * pad + 40} height={16} rx={2} fill="#1A2332" />
-                <line x1={pad - 20} y1={pad + r * cellH} x2={svgW - pad + 20} y2={pad + r * cellH} stroke="#334155" strokeWidth={0.5} strokeDasharray="6 4" />
+                <rect x={pad - 20} y={pad + r * cellH - 8} width={svgW - 2 * pad + 40} height={16} rx={2} fill="#222225" />
+                <line x1={pad - 20} y1={pad + r * cellH} x2={svgW - pad + 20} y2={pad + r * cellH} stroke="#333336" strokeWidth={0.5} strokeDasharray="6 4" />
               </g>
             ))}
             {/* Roads — vertical */}
             {[0, 1, 2, 3].map(c => (
               <g key={`vr${c}`}>
-                <rect x={pad + c * cellW - 8} y={pad - 20} width={16} height={svgH - 2 * pad + 40} rx={2} fill="#1A2332" />
-                <line x1={pad + c * cellW} y1={pad - 20} x2={pad + c * cellW} y2={svgH - pad + 20} stroke="#334155" strokeWidth={0.5} strokeDasharray="6 4" />
+                <rect x={pad + c * cellW - 8} y={pad - 20} width={16} height={svgH - 2 * pad + 40} rx={2} fill="#222225" />
+                <line x1={pad + c * cellW} y1={pad - 20} x2={pad + c * cellW} y2={svgH - pad + 20} stroke="#333336" strokeWidth={0.5} strokeDasharray="6 4" />
               </g>
             ))}
 
@@ -223,7 +223,7 @@ export default function LiveSimulation({ data }) {
                   <circle cx={cx} cy={cy} r={16} fill={cong.color} opacity={0.08} />
 
                   {/* Main node */}
-                  <circle cx={cx} cy={cy} r={12} fill="#0C1220" stroke={cong.color} strokeWidth={2} />
+                  <circle cx={cx} cy={cy} r={12} fill="#19191c" stroke={cong.color} strokeWidth={2} />
 
                   {/* Traffic light indicator */}
                   <circle cx={cx} cy={cy} r={4}
@@ -234,12 +234,12 @@ export default function LiveSimulation({ data }) {
                   <rect x={cx + 12} y={cy - 2} width={Math.min(inter.queue_ew * 0.8, 30)} height={4} rx={1} fill="#F59E0B" opacity={0.7} />
 
                   {/* Name */}
-                  <text x={cx} y={cy + 24} textAnchor="middle" fill="#94A3B8" fontSize="7" fontWeight="500">{NAMES[i]}</text>
+                  <text x={cx} y={cy + 24} textAnchor="middle" fill="#a8a29e" fontSize="7" fontWeight="500">{NAMES[i]}</text>
 
                   {/* Action badge */}
                   {frame?.actions && (
                     <rect x={cx + 10} y={cy - 20} width={5} height={5} rx={1}
-                      fill={ACTION_COLORS[frame.actions[i]] || "#64748B"} />
+                      fill={ACTION_COLORS[frame.actions[i]] || "#78716c"} />
                   )}
 
                   {/* Chaos overlays */}
@@ -256,18 +256,18 @@ export default function LiveSimulation({ data }) {
 
             {/* Legend */}
             <g transform={`translate(${svgW - 150}, ${svgH - 55})`}>
-              <rect x={-8} y={-12} width={150} height={52} rx={6} fill="#0C1220" stroke="rgba(148,163,184,0.07)" />
+              <rect x={-8} y={-12} width={150} height={52} rx={6} fill="#19191c" stroke="rgba(255,255,255,0.06)" />
               {[["#10B981", "Low"], ["#F59E0B", "Mod"], ["#F97316", "High"], ["#EF4444", "Crit"]].map(([c, l], i) => (
                 <g key={l} transform={`translate(${i * 35}, 0)`}>
                   <circle cx={8} cy={4} r={4} fill={c} />
-                  <text x={8} y={20} textAnchor="middle" fill="#94A3B8" fontSize="7">{l}</text>
+                  <text x={8} y={20} textAnchor="middle" fill="#a8a29e" fontSize="7">{l}</text>
                 </g>
               ))}
               <g transform="translate(0, 28)">
                 <rect width={4} height={8} rx={1} fill="#3B82F6" opacity={0.7} />
-                <text x={8} y={7} fill="#94A3B8" fontSize="7">NS Queue</text>
+                <text x={8} y={7} fill="#a8a29e" fontSize="7">NS Queue</text>
                 <rect x={60} width={8} height={4} rx={1} fill="#F59E0B" opacity={0.7} />
-                <text x={72} y={5} fill="#94A3B8" fontSize="7">EW Queue</text>
+                <text x={72} y={5} fill="#a8a29e" fontSize="7">EW Queue</text>
               </g>
             </g>
           </svg>
@@ -368,9 +368,9 @@ export default function LiveSimulation({ data }) {
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <LineChart data={rollingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
-                <XAxis dataKey="step" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="step" tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={ttStyle} />
                 <Line type="monotone" dataKey="queue" stroke="#3B82F6" strokeWidth={1.5} dot={false} name="Avg Queue" />
                 <Line type="monotone" dataKey="reward" stroke="#10B981" strokeWidth={1.5} dot={false} name="Reward" />

@@ -13,7 +13,7 @@ const NAMES = [
 
 const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
-const ttStyle = { background: "#0C1220", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 10, color: "#F1F5F9" }
+const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4" }
 
 export default function Overview({ data }) {
   const cmp = data.scenario_comparison
@@ -131,7 +131,7 @@ export default function Overview({ data }) {
       </div>
 
       {/* Economic Impact */}
-      <div className="card" style={{ background: "linear-gradient(135deg, rgba(6,182,212,0.04), rgba(245,158,11,0.04))" }}>
+      <div className="card" style={{ background: "linear-gradient(135deg, rgba(198,168,103,0.04), rgba(52,211,153,0.04))" }}>
         <div className="section-title">
           <span className="dot" style={{ background: "var(--gold)" }} />
           Economic Impact Analysis (Dubai RTA Projection)
@@ -175,9 +175,9 @@ export default function Overview({ data }) {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={barData} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
-              <XAxis dataKey="agent" tick={{ fill: "#94A3B8", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="agent" tick={{ fill: "#a8a29e", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#a8a29e", fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={ttStyle} />
               <Bar dataKey="Throughput" fill="#3B82F6" radius={[4,4,0,0]} />
               <Bar dataKey="Wait Time" fill="#F59E0B" radius={[4,4,0,0]} />
@@ -192,8 +192,8 @@ export default function Overview({ data }) {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(148,163,184,0.08)" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: "#94A3B8", fontSize: 10 }} />
+              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+              <PolarAngleAxis dataKey="metric" tick={{ fill: "#a8a29e", fontSize: 10 }} />
               <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
               <Radar name="Fixed Timer" dataKey="Fixed Timer" stroke="#EF4444" fill="#EF4444" fillOpacity={0.1} />
               <Radar name="Q-Learning" dataKey="Q-Learning" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.15} />

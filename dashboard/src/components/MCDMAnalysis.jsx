@@ -7,7 +7,7 @@ import {
 
 const AGENT_COLORS = { "Fixed Timer": "#EF4444", "Q-Learning": "#3B82F6", "SARSA": "#10B981", "Q-Learning + Bus Priority": "#6366F1", "SARSA + Bus Priority": "#14B8A6" }
 const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const ttStyle = { background: "#0C1220", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 10, color: "#F1F5F9", fontSize: 11 }
+const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4", fontSize: 11 }
 
 function downloadJSON(obj, filename) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" })
@@ -174,12 +174,12 @@ export default function MCDMAnalysis({ data }) {
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <RadarChart data={radarData}>
-              <PolarGrid stroke="rgba(148,163,184,0.08)" />
-              <PolarAngleAxis dataKey="criterion" tick={{ fill: "#94A3B8", fontSize: 10 }} />
+              <PolarGrid stroke="rgba(255,255,255,0.06)" />
+              <PolarAngleAxis dataKey="criterion" tick={{ fill: "#a8a29e", fontSize: 10 }} />
               <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
               {Object.keys(normMatrix).map(p => (
                 <Radar key={p} name={p} dataKey={p}
-                  stroke={AGENT_COLORS[p] || "#64748B"} fill={AGENT_COLORS[p] || "#64748B"} fillOpacity={0.08} strokeWidth={1.5} />
+                  stroke={AGENT_COLORS[p] || "#78716c"} fill={AGENT_COLORS[p] || "#78716c"} fillOpacity={0.08} strokeWidth={1.5} />
               ))}
             </RadarChart>
           </ResponsiveContainer>
@@ -192,9 +192,9 @@ export default function MCDMAnalysis({ data }) {
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={scoreData} barGap={3}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
-              <XAxis dataKey="policy" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
-              <YAxis tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="policy" tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
+              <YAxis tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
               <Tooltip contentStyle={ttStyle} />
               <Bar dataKey="WSM" fill="#3B82F6" radius={[3, 3, 0, 0]} />
               <Bar dataKey="TOPSIS" fill="#8B5CF6" radius={[3, 3, 0, 0]} />

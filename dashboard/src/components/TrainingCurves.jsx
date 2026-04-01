@@ -7,7 +7,7 @@ import {
 const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
 const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const ttStyle = { background: "#0C1220", border: "1px solid rgba(148,163,184,0.12)", borderRadius: 10, color: "#F1F5F9", fontSize: 11 }
+const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4", fontSize: 11 }
 
 const METRICS = [
   { key: "episode_rewards", label: "Cumulative Reward", yLabel: "Reward", color: "#06B6D4" },
@@ -88,11 +88,11 @@ export default function TrainingCurves({ data }) {
         </div>
         <ResponsiveContainer width="100%" height={320}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
-            <XAxis dataKey="episode" tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: "Episode", position: "insideBottom", offset: -5, fill: "#64748B", fontSize: 10 }} />
-            <YAxis tick={{ fill: "#94A3B8", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: metricInfo.yLabel, angle: -90, position: "insideLeft", fill: "#64748B", fontSize: 10 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="episode" tick={{ fill: "#a8a29e", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: "Episode", position: "insideBottom", offset: -5, fill: "#78716c", fontSize: 10 }} />
+            <YAxis tick={{ fill: "#a8a29e", fontSize: 10 }} axisLine={false} tickLine={false} label={{ value: metricInfo.yLabel, angle: -90, position: "insideLeft", fill: "#78716c", fontSize: 10 }} />
             <Tooltip contentStyle={ttStyle} />
-            <Legend wrapperStyle={{ fontSize: 11, color: "#94A3B8" }} />
+            <Legend wrapperStyle={{ fontSize: 11, color: "#a8a29e" }} />
             {Object.entries(AGENT_COLORS).map(([ag, color]) => (
               <Line key={ag} type="monotone" dataKey={AGENT_LABELS[ag]}
                 stroke={color} strokeWidth={1.5} dot={false} />
@@ -110,9 +110,9 @@ export default function TrainingCurves({ data }) {
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={epsilonData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" />
-              <XAxis dataKey="episode" tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#94A3B8", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="episode" tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
               <Tooltip contentStyle={ttStyle} />
               <Area type="monotone" dataKey="Q-Learning" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.1} />
               <Area type="monotone" dataKey="SARSA" stroke="#10B981" fill="#10B981" fillOpacity={0.1} />
