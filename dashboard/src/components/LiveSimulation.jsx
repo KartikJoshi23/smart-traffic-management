@@ -176,25 +176,26 @@ export default function LiveSimulation({ data }) {
             <span className="section-dot" style={{ background: agentColor }} />
             Intersection Network — {AGENT_META[agentType].label}
           </div>
-          <svg viewBox="0 0 700 700" style={{ width: "100%", maxHeight: 520, background: "#101012", borderRadius: 8, border: "1px solid var(--border-subtle)" }}>
+          <svg viewBox="0 0 700 700" style={{ width: "100%", maxHeight: 520, background: "#0a0a0c", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
             {/* Zone labels */}
             {ZONES.map((z, i) => (
-              <text key={z} x={15} y={110 + i * 160} fill="#52525b" fontSize="10" fontWeight="600" fontFamily="Inter">{z}</text>
+              <text key={z} x={18} y={116 + i * 160} fill="#3f3f46" fontSize="9" fontWeight="600" fontFamily="Inter" letterSpacing="0.05em">{z}</text>
             ))}
 
-            {/* Roads */}
+            {/* Roads - vertical */}
             {[0,1,2,3].map(i => {
               const x = 130 + i * 150
               return <g key={"rv" + i}>
-                <line x1={x} y1={60} x2={x} y2={680} stroke="#27272a" strokeWidth="28" strokeLinecap="round" />
-                <line x1={x} y1={60} x2={x} y2={680} stroke="#333336" strokeWidth="1" strokeDasharray="8 8" />
+                <rect x={x - 13} y={50} width={26} height={640} fill="#18181b" rx="2" />
+                <line x1={x} y1={50} x2={x} y2={690} stroke="#27272a" strokeWidth="1" strokeDasharray="6 6" />
               </g>
             })}
+            {/* Roads - horizontal */}
             {[0,1,2,3].map(i => {
               const y = 110 + i * 160
               return <g key={"rh" + i}>
-                <line x1={60} y1={y} x2={680} y2={y} stroke="#27272a" strokeWidth="28" strokeLinecap="round" />
-                <line x1={60} y1={y} x2={680} y2={y} stroke="#333336" strokeWidth="1" strokeDasharray="8 8" />
+                <rect x={50} y={y - 13} width={640} height={26} fill="#18181b" rx="2" />
+                <line x1={50} y1={y} x2={690} y2={y} stroke="#27272a" strokeWidth="1" strokeDasharray="6 6" />
               </g>
             })}
 
@@ -214,29 +215,27 @@ export default function LiveSimulation({ data }) {
 
               return (
                 <g key={i} onClick={() => setSelectedInt(i)} style={{ cursor: "pointer" }}>
-                  {/* Congestion ring */}
-                  <circle cx={cx} cy={cy} r={24} fill="none" stroke={cong.ring} strokeWidth={isSelected ? 4 : 2} />
+                  {/* Intersection box */}
+                  <rect x={cx - 16} y={cy - 16} width={32} height={32} rx={4} fill="#111113" stroke={isSelected ? "#ffffff" : cong.color} strokeWidth={isSelected ? 2 : 1.5} opacity={1} />
 
-                  {/* Intersection node */}
-                  <circle cx={cx} cy={cy} r={16} fill="#18181b" stroke={cong.color} strokeWidth={2} />
+                  {/* Phase indicator (traffic light dots) */}
+                  <circle cx={cx - 5} cy={cy - 3} r={3} fill={inter.phase === 0 ? "#10B981" : "#27272a"} />
+                  <circle cx={cx + 5} cy={cy - 3} r={3} fill={inter.phase === 1 ? "#10B981" : "#27272a"} />
+                  <text x={cx} y={cy + 7} textAnchor="middle" fill={cong.color} fontSize="6" fontWeight="700" fontFamily="Inter">{cong.label.toUpperCase()}</text>
 
-                  {/* Phase indicator (traffic light) */}
-                  <circle cx={cx - 5} cy={cy} r={4} fill={inter.phase === 0 ? "#10B981" : "#3f3f46"} />
-                  <circle cx={cx + 5} cy={cy} r={4} fill={inter.phase === 1 ? "#10B981" : "#3f3f46"} />
-
-                  {/* Queue bars */}
-                  <rect x={cx - 3} y={cy - 16 - Math.min(inter.queue_ns * 1.5, 35)} width={6} height={Math.min(inter.queue_ns * 1.5, 35)} fill="#3B82F6" opacity={0.8} rx={2} />
-                  <rect x={cx + 16} y={cy - 3} width={Math.min(inter.queue_ew * 1.5, 35)} height={6} fill="#F59E0B" opacity={0.8} rx={2} />
+                  {/* Queue bars - NS (up) and EW (right) */}
+                  {inter.queue_ns > 0 && <rect x={cx - 3} y={cy - 20 - Math.min(inter.queue_ns * 1.2, 30)} width={6} height={Math.min(inter.queue_ns * 1.2, 30)} fill="#3B82F6" opacity={0.7} rx={1} />}
+                  {inter.queue_ew > 0 && <rect x={cx + 20} y={cy - 3} width={Math.min(inter.queue_ew * 1.2, 30)} height={6} fill="#F59E0B" opacity={0.7} rx={1} />}
 
                   {/* Name label */}
-                  <text x={cx} y={cy + 32} textAnchor="middle" fill="#a1a1aa" fontSize="8" fontFamily="Inter">{NAMES[i]}</text>
+                  <text x={cx} y={cy + 28} textAnchor="middle" fill="#71717a" fontSize="7" fontFamily="Inter">{NAMES[i]}</text>
 
-                  {/* Action badge */}
+                  {/* Action badge - positioned top-right */}
                   {frame?.actions?.[i] != null && (
                     <g>
-                      <rect x={cx - 14} y={cy - 36 - Math.min(inter.queue_ns * 1.5, 35)} width={28} height={12} rx={3} fill={ACTION_COLORS[frame.actions[i]]} opacity={0.9} />
-                      <text x={cx} y={cy - 28 - Math.min(inter.queue_ns * 1.5, 35)} textAnchor="middle" fill="white" fontSize="7" fontWeight="700" fontFamily="Inter">
-                        {ACTION_NAMES[frame.actions[i]]}
+                      <rect x={cx + 10} y={cy - 28} width={24} height={10} rx={2} fill={ACTION_COLORS[frame.actions[i]]} opacity={0.85} />
+                      <text x={cx + 22} y={cy - 20} textAnchor="middle" fill="white" fontSize="5" fontWeight="700" fontFamily="Inter">
+                        {ACTION_NAMES[frame.actions[i]].slice(0, 3)}
                       </text>
                     </g>
                   )}

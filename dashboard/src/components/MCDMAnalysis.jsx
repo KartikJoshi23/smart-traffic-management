@@ -240,23 +240,41 @@ export default function MCDMAnalysis({ data }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Weight Set</th>
-                  {CRITERIA_SHORT.map(c => <th key={c}>{c}</th>)}
-                  <th>WSM Winner</th>
-                  <th>TOPSIS Winner</th>
+                  <th>Criterion</th>
+                  <th>Weight Delta</th>
+                  <th>Modified Weight</th>
+                  <th>WSM #1</th>
+                  <th>TOPSIS #1</th>
+                  <th>Ranking Stable?</th>
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(sensitivity).map(([key, val]) => (
-                  <tr key={key}>
-                    <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{key.replace(/_/g, " ").replace("emphasis", "Emphasis")}</td>
-                    {(val.weights || []).map((w, i) => (
-                      <td key={i} className="mono">{(w * 100).toFixed(0)}%</td>
-                    ))}
-                    <td style={{ color: "var(--blue)", fontWeight: 600, fontSize: 11 }}>{val.wsm_winner || "N/A"}</td>
-                    <td style={{ color: "var(--violet)", fontWeight: 600, fontSize: 11 }}>{val.topsis_winner || "N/A"}</td>
-                  </tr>
-                ))}
+                {Object.values(sensitivity).map((entry) => {
+                  const crit = CRITERIA_SHORT[criteria.indexOf(entry.criterion)] || entry.criterion
+                  return entry.variations?.map((v, vi) => {
+                    const wsmWinIdx = v.wsm_ranking?.[0]
+                    const topsisWinIdx = v.topsis_ranking?.[0]
+                    const wsmWinner = alternatives[wsmWinIdx] || "N/A"
+                    const topsisWinner = alternatives[topsisWinIdx] || "N/A"
+                    const stable = wsmWinner === topsisWinner
+                    return (
+                      <tr key={entry.criterion + vi}>
+                        {vi === 0 && <td rowSpan={entry.variations.length} style={{ fontWeight: 600, color: "var(--text-primary)", verticalAlign: "middle" }}>{crit}</td>}
+                        <td className="mono" style={{ color: v.weight_delta > 0 ? "var(--green-light)" : v.weight_delta < 0 ? "var(--red-light)" : "var(--text-secondary)" }}>
+                          {v.weight_delta > 0 ? "+" : ""}{(v.weight_delta * 100).toFixed(1)}%
+                        </td>
+                        <td className="mono">{(v.modified_weight * 100).toFixed(1)}%</td>
+                        <td style={{ color: "var(--blue)", fontWeight: 600, fontSize: 11 }}>{wsmWinner}</td>
+                        <td style={{ color: "var(--violet)", fontWeight: 600, fontSize: 11 }}>{topsisWinner}</td>
+                        <td>
+                          <span className={stable ? "badge badge-green" : "badge badge-amber"}>
+                            {stable ? "Consistent" : "Divergent"}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })}
               </tbody>
             </table>
           </div>

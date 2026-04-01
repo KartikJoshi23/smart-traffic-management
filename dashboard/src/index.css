@@ -202,10 +202,6 @@ input[type='range']::-webkit-slider-thumb {
 .accent-bar {
   height: 3px;
   background: linear-gradient(90deg,
-    var(--blue) 0%, var(--blue) 20%,
-    var(--green) 20%, var(--green) 40%,
-    var(--amber) 40%, var(--amber) 60%,
-    var(--violet) 60%, var(--violet) 80%,
-    var(--teal) 80%, var(--teal) 100%
+    #EF4444 0%, #F59E0B 30%, #10B981 70%, #3B82F6 100%
   );
 }

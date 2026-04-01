@@ -14,16 +14,18 @@ export default function TrainingCurves({ data }) {
   if (!results) return <p style={{ color: "var(--text-tertiary)" }}>No training data</p>
 
   const scenarioData = results[scenario] || {}
-  const episodes = scenarioData.q_learning?.episodes || scenarioData.sarsa?.episodes || []
-  const chartData = episodes.map((_, i) => {
+  // Data is at scenarioData[agent].history.{episode_rewards, avg_wait_times, throughputs, epsilons}
+  const qlH = scenarioData.q_learning?.history
+  const saH = scenarioData.sarsa?.history
+  const numEpisodes = qlH?.episode_rewards?.length || saH?.episode_rewards?.length || 0
+  const METRIC_KEYS = { rewards: "episode_rewards", avg_wait: "avg_wait_times", avg_throughput: "throughputs", epsilon: "epsilons" }
+  const chartData = Array.from({ length: numEpisodes }, (_, i) => {
     const point = { episode: i + 1 }
     Object.entries(AGENTS).forEach(([key, a]) => {
-      const agentData = scenarioData[key]
-      if (agentData) {
-        if (metric === "rewards") point[a.label] = agentData.rewards?.[i]
-        else if (metric === "avg_wait") point[a.label] = agentData.avg_wait?.[i]
-        else if (metric === "avg_throughput") point[a.label] = agentData.avg_throughput?.[i]
-        else if (metric === "epsilon") point[a.label] = agentData.epsilon?.[i]
+      const h = scenarioData[key]?.history
+      if (h) {
+        const arr = h[METRIC_KEYS[metric]]
+        if (arr) point[a.label] = arr[i]
       }
     })
     return point
@@ -75,19 +77,21 @@ export default function TrainingCurves({ data }) {
       {/* Summary stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         {Object.entries(AGENTS).map(([key, a]) => {
-          const ad = scenarioData[key]
-          if (!ad) return null
-          const finalReward = ad.rewards?.[ad.rewards.length - 1]?.toFixed(1)
-          const bestReward = ad.rewards ? Math.max(...ad.rewards).toFixed(1) : "N/A"
-          const finalEps = ad.epsilon?.[ad.epsilon.length - 1]?.toFixed(3)
+          const h = scenarioData[key]?.history
+          if (!h) return null
+          const rews = h.episode_rewards || []
+          const eps = h.epsilons || []
+          const finalReward = rews.length ? rews[rews.length - 1]?.toFixed(1) : "N/A"
+          const bestReward = rews.length ? Math.max(...rews).toFixed(1) : "N/A"
+          const finalEps = eps.length ? eps[eps.length - 1]?.toFixed(3) : "N/A"
           return (
             <div key={key} className="metric-card" style={{ borderLeft: `3px solid ${a.color}` }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: a.color, marginBottom: 8 }}>{a.label}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <div><div className="metric-label">Final Reward</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{finalReward}</div></div>
                 <div><div className="metric-label">Best Reward</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{bestReward}</div></div>
-                <div><div className="metric-label">Final ε</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{finalEps}</div></div>
-                <div><div className="metric-label">Episodes</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{ad.episodes?.length || 0}</div></div>
+                <div><div className="metric-label">Final Epsilon</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{finalEps}</div></div>
+                <div><div className="metric-label">Episodes</div><div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{rews.length}</div></div>
               </div>
             </div>
           )
