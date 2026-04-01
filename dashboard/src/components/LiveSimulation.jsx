@@ -140,9 +140,9 @@ export default function LiveSimulation({ data }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
         {/* SVG Grid */}
         <div className="card" style={{ padding: 20 }}>
-          <svg viewBox="0 0 720 720" style={{ width: "100%", maxHeight: 560, borderRadius: 10 }}>
+          <svg viewBox="0 0 740 740" style={{ width: "100%", maxHeight: 580, borderRadius: 10 }}>
             {/* Background */}
-            <rect width="720" height="720" fill="#0f0f12" rx="10"/>
+            <rect width="740" height="740" fill="#0c0c0f" rx="10"/>
 
             {/* Grid pattern */}
             <defs>
@@ -150,10 +150,10 @@ export default function LiveSimulation({ data }) {
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
               </pattern>
             </defs>
-            <rect width="720" height="720" fill="url(#gridP)"/>
+            <rect width="740" height="740" fill="url(#gridP)"/>
 
             {/* Sandstorm overlay */}
-            {chaos.sand && <rect width="720" height="720" fill="rgba(245,158,11,0.05)" rx="10"/>}
+            {chaos.sand && <rect width="740" height="740" fill="rgba(245,158,11,0.06)" rx="10"/>}
 
             {/* Zone labels - left side, colored */}
             {ZONES.map((z, i) => (
@@ -164,11 +164,8 @@ export default function LiveSimulation({ data }) {
             {[0,1,2,3].map(i => {
               const y = 110 + i * 155
               return <g key={"rh"+i}>
-                <rect x={55} y={y-15} width={640} height={30} fill="#1a1a1f" rx="2"/>
-                <line x1={55} y1={y} x2={695} y2={y} stroke="#2a2a30" strokeWidth="1" strokeDasharray="8 6"/>
-                {/* Direction arrows */}
-                <text x={65} y={y-5} fill="#333" fontSize="8" fontFamily="Inter">{String.fromCharCode(9654)}</text>
-                <text x={65} y={y+8} fill="#333" fontSize="8" fontFamily="Inter">{String.fromCharCode(9664)}</text>
+                <rect x={55} y={y-18} width={650} height={36} fill="#151518" rx="3"/>
+                <line x1={55} y1={y} x2={705} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
               </g>
             })}
 
@@ -176,8 +173,8 @@ export default function LiveSimulation({ data }) {
             {[0,1,2,3].map(i => {
               const x = 140 + i * 155
               return <g key={"rv"+i}>
-                <rect x={x-15} y={55} width={30} height={640} fill="#1a1a1f" rx="2"/>
-                <line x1={x} y1={55} x2={x} y2={695} stroke="#2a2a30" strokeWidth="1" strokeDasharray="8 6"/>
+                <rect x={x-18} y={55} width={36} height={650} fill="#151518" rx="3"/>
+                <line x1={x} y1={55} x2={x} y2={705} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
               </g>
             })}
 
@@ -189,70 +186,75 @@ export default function LiveSimulation({ data }) {
               const isSel = selInt === i
               const hasFail = chaos.sensor && (i % 3 === step % 3)
               const hasEms = chaos.ems && i === (step % 16)
-              const zoneColor = ZONE_COLORS[row]
+              const isGreenNS = inter.phase === 0
 
               return (
                 <g key={i} onClick={() => setSelInt(i)} style={{ cursor: "pointer" }}>
-                  {/* Selection ring */}
-                  {isSel && <circle cx={cx} cy={cy} r={30} fill="none" stroke="white" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5}/>}
+                  {/* Selection highlight */}
+                  {isSel && <circle cx={cx} cy={cy} r={28} fill="none" stroke="white" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.4}/>}
 
                   {/* Emergency pulse */}
                   {hasEms && <circle cx={cx} cy={cy} r={26} fill="none" stroke="#3b82f6" strokeWidth={2} opacity={0.6}>
-                    <animate attributeName="r" values="26;34;26" dur="1s" repeatCount="indefinite"/>
-                    <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1s" repeatCount="indefinite"/>
+                    <animate attributeName="r" values="26;36;26" dur="1s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1s" repeatCount="indefinite"/>
                   </circle>}
 
-                  {/* Congestion glow */}
-                  <circle cx={cx} cy={cy} r={22} fill={cg.bg}/>
+                  {/* Outer congestion ring */}
+                  <circle cx={cx} cy={cy} r={22} fill="none" stroke={cg.color} strokeWidth={2.5} opacity={0.4}/>
 
-                  {/* Main circle */}
-                  <circle cx={cx} cy={cy} r={18} fill="#111115" stroke={cg.color} strokeWidth={isSel ? 2.5 : 1.5}/>
+                  {/* Main node */}
+                  <circle cx={cx} cy={cy} r={18} fill="#111115" stroke={isSel ? "white" : cg.color} strokeWidth={isSel ? 2 : 1.2}/>
 
-                  {/* Traffic light dots inside */}
-                  <circle cx={cx-5} cy={cy-2} r={3.5} fill={inter.phase === 0 ? "#22c55e" : "#27272a"} stroke={inter.phase === 0 ? "#22c55e40" : "none"} strokeWidth={2}/>
-                  <circle cx={cx+5} cy={cy-2} r={3.5} fill={inter.phase === 1 ? "#22c55e" : "#27272a"} stroke={inter.phase === 1 ? "#22c55e40" : "none"} strokeWidth={2}/>
+                  {/* Traffic signal: green for active direction */}
+                  <circle cx={cx} cy={cy} r={6} fill={isGreenNS ? "#22c55e" : "#ef4444"} opacity={0.9}/>
+                  <circle cx={cx} cy={cy} r={9} fill="none" stroke={isGreenNS ? "#22c55e" : "#ef4444"} strokeWidth={0.7} opacity={0.3}/>
 
-                  {/* Phase labels */}
-                  <text x={cx-5} y={cy+8} textAnchor="middle" fill="#52525b" fontSize="5" fontFamily="Inter">NS</text>
-                  <text x={cx+5} y={cy+8} textAnchor="middle" fill="#52525b" fontSize="5" fontFamily="Inter">EW</text>
+                  {/* Direction indicator text */}
+                  <text x={cx} y={cy + 14} textAnchor="middle" fill={isGreenNS ? "#4ade80" : "#f87171"} fontSize="5" fontWeight="700" fontFamily="Inter">{isGreenNS ? "NS" : "EW"}</text>
 
-                  {/* NS Queue bar (upward) */}
+                  {/* NS Queue bar (upward from intersection) */}
                   {inter.queue_ns > 0 && <>
-                    <rect x={cx-4} y={cy - 22 - Math.min(inter.queue_ns * 1.5, 40)} width={8} height={Math.min(inter.queue_ns * 1.5, 40)} fill="#3b82f6" opacity={0.6} rx={2}/>
-                    <text x={cx} y={cy - 25 - Math.min(inter.queue_ns * 1.5, 40)} textAnchor="middle" fill="#60a5fa" fontSize="7" fontWeight="700">{chaos.sensor && hasFail ? "?" : inter.queue_ns}</text>
+                    <rect x={cx - 3} y={cy - 22 - Math.min(inter.queue_ns * 2, 50)} width={6} height={Math.min(inter.queue_ns * 2, 50)} fill="#3b82f6" opacity={0.7} rx={3}/>
+                    <text x={cx} y={cy - 26 - Math.min(inter.queue_ns * 2, 50)} textAnchor="middle" fill="#93c5fd" fontSize="8" fontWeight="700">{chaos.sensor && hasFail ? "?" : Math.round(inter.queue_ns)}</text>
                   </>}
 
-                  {/* EW Queue bar (rightward) */}
+                  {/* EW Queue bar (rightward from intersection) */}
                   {inter.queue_ew > 0 && <>
-                    <rect x={cx + 22} y={cy-4} width={Math.min(inter.queue_ew * 1.5, 40)} height={8} fill="#f59e0b" opacity={0.6} rx={2}/>
-                    <text x={cx + 25 + Math.min(inter.queue_ew * 1.5, 40)} y={cy+3} fill="#fbbf24" fontSize="7" fontWeight="700">{chaos.sensor && hasFail ? "?" : inter.queue_ew}</text>
+                    <rect x={cx + 22} y={cy - 3} width={Math.min(inter.queue_ew * 2, 50)} height={6} fill="#f59e0b" opacity={0.7} rx={3}/>
+                    <text x={cx + 26 + Math.min(inter.queue_ew * 2, 50)} y={cy + 3} fill="#fcd34d" fontSize="8" fontWeight="700">{chaos.sensor && hasFail ? "?" : Math.round(inter.queue_ew)}</text>
                   </>}
 
-                  {/* Name */}
-                  <text x={cx} y={cy+36} textAnchor="middle" fill="#71717a" fontSize="7.5" fontWeight="500" fontFamily="Inter">{NAMES[i]}</text>
+                  {/* Intersection name */}
+                  <text x={cx} y={cy + 34} textAnchor="middle" fill="#a1a1aa" fontSize="8" fontWeight="500" fontFamily="Inter">{NAMES[i]}</text>
 
-                  {/* Action badge */}
+                  {/* Congestion label below name */}
+                  <rect x={cx - 14} y={cy + 37} width={28} height={10} rx={3} fill={cg.bg}/>
+                  <text x={cx} y={cy + 44.5} textAnchor="middle" fill={cg.color} fontSize="5.5" fontWeight="800" fontFamily="Inter">{cg.label}</text>
+
+                  {/* Action badge above */}
                   {frame?.actions?.[i] != null && (
                     <g>
-                      <rect x={cx-14} y={cy-36} width={28} height={12} rx={3} fill={ACT_COLORS[frame.actions[i]]} opacity={0.9}/>
-                      <text x={cx} y={cy-27.5} textAnchor="middle" fill="white" fontSize="6" fontWeight="700" fontFamily="Inter">{ACTIONS[frame.actions[i]]}</text>
+                      <rect x={cx - 16} y={cy - 38} width={32} height={13} rx={4} fill={ACT_COLORS[frame.actions[i]]}/>
+                      <text x={cx} y={cy - 28.5} textAnchor="middle" fill="white" fontSize="7" fontWeight="700" fontFamily="Inter">{ACTIONS[frame.actions[i]]}</text>
                     </g>
                   )}
 
-                  {/* Sensor fail */}
-                  {hasFail && <text x={cx+16} y={cy-12} fill="#ef4444" fontSize="12" fontWeight="bold">!</text>}
+                  {/* Sensor fail indicator */}
+                  {hasFail && <text x={cx + 16} y={cy - 14} fill="#ef4444" fontSize="14" fontWeight="bold">!</text>}
                 </g>
               )
             })}
 
             {/* Legend */}
-            <g transform="translate(480, 688)">
-              <rect x={0} y={-4} width={10} height={10} fill="#3b82f6" rx={2} opacity={0.6}/>
-              <text x={14} y={4} fill="#71717a" fontSize="9" fontFamily="Inter">NS Queue</text>
-              <rect x={80} y={-4} width={10} height={10} fill="#f59e0b" rx={2} opacity={0.6}/>
-              <text x={94} y={4} fill="#71717a" fontSize="9" fontFamily="Inter">EW Queue</text>
-              <circle cx={175} cy={1} r={4} fill="#22c55e" opacity={0.5}/>
-              <text x={183} y={4} fill="#71717a" fontSize="9" fontFamily="Inter">Green Phase</text>
+            <g transform="translate(440, 718)">
+              <rect x={0} y={-4} width={10} height={10} fill="#3b82f6" rx={2} opacity={0.7}/>
+              <text x={14} y={4} fill="#a1a1aa" fontSize="9" fontFamily="Inter">NS Queue</text>
+              <rect x={85} y={-4} width={10} height={10} fill="#f59e0b" rx={2} opacity={0.7}/>
+              <text x={99} y={4} fill="#a1a1aa" fontSize="9" fontFamily="Inter">EW Queue</text>
+              <circle cx={185} cy={1} r={4} fill="#22c55e"/>
+              <text x={193} y={4} fill="#a1a1aa" fontSize="9" fontFamily="Inter">NS Green</text>
+              <circle cx={255} cy={1} r={4} fill="#ef4444"/>
+              <text x={263} y={4} fill="#a1a1aa" fontSize="9" fontFamily="Inter">EW Green</text>
             </g>
           </svg>
         </div>

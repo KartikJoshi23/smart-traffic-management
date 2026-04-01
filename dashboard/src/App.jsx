@@ -58,7 +58,7 @@ export default function App() {
                 Dubai Smart Traffic Management
               </h1>
               <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-                Multi-Agent Reinforcement Learning \u00b7 Q-Learning & SARSA \u00b7 WSM & TOPSIS
+                Multi-Agent Reinforcement Learning {String.fromCharCode(183)} Q-Learning & SARSA {String.fromCharCode(183)} WSM & TOPSIS
               </p>
             </div>
           </div>
@@ -75,14 +75,14 @@ export default function App() {
         </div>
       </header>
 
-      {/* Navigation - each tab colored */}
+      {/* Navigation - pill tabs */}
       <nav style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-dim)" }}>
-        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 32px", display: "flex", gap: 0 }}>
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 28px", display: "flex", gap: 2, alignItems: "center" }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={"nav-tab" + (tab === t.id ? " active" : "")}
               style={{ "--accent-color": t.color }}>
-              <t.icon size={15} style={{ color: tab === t.id ? t.color : undefined }}/>
+              <t.icon size={15} style={{ color: tab === t.id ? "white" : t.color, opacity: tab === t.id ? 1 : 0.6 }}/>
               {t.label}
             </button>
           ))}

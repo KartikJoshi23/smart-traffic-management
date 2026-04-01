@@ -102,28 +102,31 @@ body {
 
 /* Navigation */
 .nav-tab {
-  padding: 12px 20px;
+  padding: 10px 20px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
   border: none;
   background: transparent;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 8px;
-  border-bottom: 2px solid transparent;
+  border-radius: 10px;
+  margin: 8px 4px;
   white-space: nowrap;
+  position: relative;
 }
 .nav-tab:hover {
   color: var(--text-secondary);
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.04);
 }
 .nav-tab.active {
-  color: var(--accent-color, var(--text-white));
-  border-bottom-color: var(--accent-color, var(--blue));
-  font-weight: 600;
+  color: white;
+  font-weight: 700;
+  background: var(--accent-color, var(--blue));
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 20px color-mix(in srgb, var(--accent-color, var(--blue)) 25%, transparent);
 }
 
 /* Buttons */
