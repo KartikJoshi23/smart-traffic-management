@@ -18,6 +18,7 @@
 \usepackage{float}
 \usepackage{multicol}
 \usepackage{caption}
+\usepackage{multirow}
 
 \geometry{margin=0.85in}
 
@@ -69,7 +70,7 @@ Each of the 16 intersections operates as a \textbf{decentralized RL agent} with 
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{llll}
+\begin{tabularx}{\textwidth}{l l l X}
     \toprule
     \textbf{Agent} & \textbf{Algorithm} & \textbf{Policy Type} & \textbf{Behavioural Trait} \\
     \midrule
@@ -77,7 +78,7 @@ Each of the 16 intersections operates as a \textbf{decentralized RL agent} with 
     SARSA & Tabular TD (on-policy) & Conservative; actual $Q(s',a')$ & Safer policies; accounts for exploration noise \\
     Fixed Timer & Deterministic cycle & No learning (baseline) & Switches phase every 15 steps; no state awareness \\
     \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \subsection{System Objectives}
@@ -131,7 +132,7 @@ Each intersection's state is a \textbf{5-dimensional} discretized tuple:
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{llcl}
+\begin{tabularx}{\textwidth}{l l c X}
     \toprule
     \textbf{Variable} & \textbf{Description} & \textbf{Range} & \textbf{Discretization} \\
     \midrule
@@ -140,7 +141,7 @@ Each intersection's state is a \textbf{5-dimensional} discretized tuple:
     $t_g$ & Green timer category & $\{0, 1, 2\}$ & Short ($<$8), Medium (8--15), Long ($>$15) \\
     $p_{\text{nbr}}$ & Neighbor pressure & $\{0, 1, 2\}$ & Avg adjacent queue: Low/Med/High \\
     \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \textbf{Neighbor pressure} provides upstream congestion awareness:
@@ -239,7 +240,7 @@ This system uses \textbf{synthetically generated data} calibrated to Dubai traff
 \begin{table}[H]
 \centering
 \small
-\begin{tabular}{llcl}
+\begin{tabularx}{\textwidth}{l l c X}
     \toprule
     \textbf{Feature} & \textbf{Type} & \textbf{Range} & \textbf{Role in Pipeline} \\
     \midrule
@@ -252,7 +253,7 @@ This system uses \textbf{synthetically generated data} calibrated to Dubai traff
     near\_misses & int & \{0, 1\} & Binomial(1, 0.05) during yellow; RL gets 15\% reduction \\
     bus\_delayed & bool & --- & Bus on red phase = delayed; tracked for MCDM \\
     \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 \subsection{Key Data Limitations}
@@ -280,8 +281,8 @@ This system uses \textbf{synthetically generated data} calibrated to Dubai traff
 
 \begin{table}[H]
 \centering
-\small
-\begin{tabular}{ll|rrrr}
+\footnotesize
+\begin{tabular}{@{}ll|rrrr@{}}
     \toprule
     \textbf{Scenario} & \textbf{Agent} & \textbf{Avg Wait} & \textbf{Throughput} & \textbf{Emissions} & \textbf{Safety} \\
     \midrule
