@@ -2,66 +2,67 @@ import { useState } from "react"
 import { ArrowUpRight, ArrowDownRight } from "lucide-react"
 
 const SCENARIOS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const AGENTS = { fixed_timer: { label: "Fixed Timer", color: "#EF4444" }, q_learning: { label: "Q-Learning", color: "#3B82F6" }, sarsa: { label: "SARSA", color: "#10B981" } }
+const AGENTS = { fixed_timer: { label: "Fixed Timer", color: "#ef4444" }, q_learning: { label: "Q-Learning", color: "#3b82f6" }, sarsa: { label: "SARSA", color: "#22c55e" } }
 const METRICS = ["avg_throughput", "avg_wait_time", "avg_emissions", "avg_safety_score"]
-const METRIC_LABELS = { avg_throughput: "Throughput", avg_wait_time: "Wait Time", avg_emissions: "Emissions", avg_safety_score: "Safety" }
-const HIGHER_BETTER = { avg_throughput: true, avg_wait_time: false, avg_emissions: false, avg_safety_score: true }
+const LABELS = { avg_throughput: "Throughput", avg_wait_time: "Wait Time", avg_emissions: "Emissions", avg_safety_score: "Safety" }
+const HIGHER = { avg_throughput: true, avg_wait_time: false, avg_emissions: false, avg_safety_score: true }
+const METRIC_COLORS = { avg_throughput: "#3b82f6", avg_wait_time: "#ef4444", avg_emissions: "#f59e0b", avg_safety_score: "#22c55e" }
 
-function getHeatColor(value, min, max, higherBetter) {
-  const ratio = max === min ? 0.5 : (value - min) / (max - min)
-  const r = higherBetter ? ratio : 1 - ratio
-  if (r > 0.7) return { bg: "rgba(16,185,129,0.12)", text: "#34D399" }
-  if (r > 0.4) return { bg: "rgba(245,158,11,0.10)", text: "#FBBF24" }
-  return { bg: "rgba(239,68,68,0.10)", text: "#F87171" }
+function heat(val, min, max, hb) {
+  const r = max === min ? 0.5 : (val - min) / (max - min)
+  const n = hb ? r : 1 - r
+  if (n > 0.66) return { bg: "rgba(34,197,94,0.12)", fg: "#4ade80" }
+  if (n > 0.33) return { bg: "rgba(245,158,11,0.10)", fg: "#fbbf24" }
+  return { bg: "rgba(239,68,68,0.10)", fg: "#f87171" }
 }
 
 export default function ScenarioComparison({ data }) {
   const cmp = data.scenario_comparison
-  const [selectedMetric, setSelectedMetric] = useState("avg_throughput")
-  if (!cmp) return <p style={{ color: "var(--text-tertiary)" }}>No data</p>
+  const [met, setMet] = useState("avg_throughput")
+  if (!cmp) return <p style={{ color: "var(--text-muted)" }}>No data</p>
 
-  // Build table data
   const rows = []
   Object.entries(SCENARIOS).forEach(([sk, sl]) => {
     const sd = cmp[sk]
     if (!sd) return
     Object.entries(AGENTS).forEach(([ak, am]) => {
       const ad = sd.agents?.[ak]
-      if (!ad) return
-      rows.push({ scenario: sl, agent: am.label, agentColor: am.color, metrics: ad.metrics })
+      if (ad) rows.push({ scenario: sl, agent: am.label, agentColor: am.color, metrics: ad.metrics })
     })
   })
 
-  // Get min/max for heatmap
-  const allVals = {}
+  const vals = {}
   METRICS.forEach(m => {
-    const vals = rows.map(r => r.metrics[m]).filter(v => v != null)
-    allVals[m] = { min: Math.min(...vals), max: Math.max(...vals) }
+    const v = rows.map(r => r.metrics[m]).filter(x => x != null)
+    vals[m] = { min: Math.min(...v), max: Math.max(...v) }
   })
 
   return (
-    <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", gap: 5 }}>
         {METRICS.map(m => (
-          <button key={m} onClick={() => setSelectedMetric(m)} className={`btn btn-sm ${selectedMetric === m ? "btn-outline active" : "btn-outline"}`}>
-            {METRIC_LABELS[m]}
+          <button key={m} onClick={() => setMet(m)}
+            className={"btn btn-sm " + (met === m ? "btn-ghost active" : "btn-ghost")}
+            style={met === m ? { borderColor: METRIC_COLORS[m], color: METRIC_COLORS[m] } : {}}>
+            {LABELS[m]}
           </button>
         ))}
       </div>
 
-      {/* Heatmap Grid */}
-      <div className="card">
-        <div className="section-title">
-          <span className="section-dot" style={{ background: "var(--violet)" }} />
-          {METRIC_LABELS[selectedMetric]} Across Scenarios
+      <div className="card card-violet">
+        <div className="section-head">
+          <div className="section-icon" style={{ background: "rgba(168,85,247,0.12)" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          </div>
+          {LABELS[met]} Across All Scenarios
         </div>
         <div style={{ overflowX: "auto" }}>
           <table className="data-table">
             <thead>
               <tr>
                 <th>Scenario</th>
-                {Object.values(AGENTS).map(a => <th key={a.label}><span style={{ color: a.color }}>●</span> {a.label}</th>)}
-                <th>Best</th>
+                {Object.values(AGENTS).map(a => <th key={a.label}><span style={{ color: a.color }}>{String.fromCharCode(9679)}</span> {a.label}</th>)}
+                <th>Best Agent</th>
                 <th>RL Improvement</th>
               </tr>
             </thead>
@@ -69,35 +70,31 @@ export default function ScenarioComparison({ data }) {
               {Object.entries(SCENARIOS).map(([sk, sl]) => {
                 const sd = cmp[sk]
                 if (!sd) return null
-                const vals = Object.entries(AGENTS).map(([ak]) => ({
-                  key: ak,
-                  val: sd.agents?.[ak]?.metrics?.[selectedMetric] ?? 0
-                }))
-                const hb = HIGHER_BETTER[selectedMetric]
-                const bestEntry = hb ? vals.reduce((a,b) => a.val > b.val ? a : b) : vals.reduce((a,b) => a.val < b.val ? a : b)
-                const ft = vals.find(v => v.key === "fixed_timer")?.val || 1
-                const bestRL = vals.filter(v => v.key !== "fixed_timer")
-                const bestRLVal = hb ? Math.max(...bestRL.map(v => v.val)) : Math.min(...bestRL.map(v => v.val))
-                const impPct = hb ? ((bestRLVal - ft) / ft * 100).toFixed(1) : ((ft - bestRLVal) / ft * 100).toFixed(1)
-                const impPositive = parseFloat(impPct) > 0
+                const v = Object.entries(AGENTS).map(([ak]) => ({ k: ak, v: sd.agents?.[ak]?.metrics?.[met] ?? 0 }))
+                const hb = HIGHER[met]
+                const best = hb ? v.reduce((a,b) => a.v > b.v ? a : b) : v.reduce((a,b) => a.v < b.v ? a : b)
+                const ft = v.find(x => x.k === "fixed_timer")?.v || 1
+                const rl = v.filter(x => x.k !== "fixed_timer")
+                const rlBest = hb ? Math.max(...rl.map(x => x.v)) : Math.min(...rl.map(x => x.v))
+                const pct = hb ? ((rlBest - ft) / ft * 100).toFixed(1) : ((ft - rlBest) / ft * 100).toFixed(1)
+                const pos = +pct > 0
 
                 return (
                   <tr key={sk}>
-                    <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{sl}</td>
-                    {vals.map(v => {
-                      const { bg, text } = getHeatColor(v.val, allVals[selectedMetric].min, allVals[selectedMetric].max, hb)
-                      const isBest = v.key === bestEntry.key
+                    <td style={{ fontWeight: 700, color: "var(--text-white)" }}>{sl}</td>
+                    {v.map(x => {
+                      const h = heat(x.v, vals[met].min, vals[met].max, hb)
                       return (
-                        <td key={v.key} className="mono" style={{ background: bg, color: text, fontWeight: isBest ? 700 : 400 }}>
-                          {v.val.toFixed(1)} {isBest && "★"}
+                        <td key={x.k} className="mono" style={{ background: h.bg, color: h.fg, fontWeight: x.k === best.k ? 800 : 400 }}>
+                          {x.v.toFixed(1)} {x.k === best.k ? String.fromCharCode(9733) : ""}
                         </td>
                       )
                     })}
-                    <td style={{ color: AGENTS[bestEntry.key].color, fontWeight: 600, fontSize: 11 }}>{AGENTS[bestEntry.key].label}</td>
+                    <td style={{ color: AGENTS[best.k].color, fontWeight: 700, fontSize: 11 }}>{AGENTS[best.k].label}</td>
                     <td>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600, color: impPositive ? "var(--green-light)" : "var(--red-light)" }}>
-                        {impPositive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                        {impPct}%
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 700,
+                        color: pos ? "#4ade80" : "#f87171" }}>
+                        {pos ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>} {pct}%
                       </span>
                     </td>
                   </tr>
@@ -108,24 +105,26 @@ export default function ScenarioComparison({ data }) {
         </div>
       </div>
 
-      {/* Scenario Detail Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
+      {/* Scenario Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
         {Object.entries(SCENARIOS).map(([sk, sl]) => {
           const sd = cmp[sk]
           if (!sd) return null
+          const scColors = { normal: "#3b82f6", rush_hour: "#ef4444", incident: "#f97316", event: "#a855f7", bus_priority: "#22c55e" }
           return (
-            <div key={sk} className="card" style={{ padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", marginBottom: 10 }}>{sl}</div>
+            <div key={sk} className="card" style={{ padding: 18, borderTop: "3px solid " + (scColors[sk] || "#3b82f6") }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-white)", marginBottom: 12 }}>{sl}</div>
               {Object.entries(AGENTS).map(([ak, am]) => {
                 const m = sd.agents?.[ak]?.metrics
                 if (!m) return null
                 return (
-                  <div key={ak} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                    <span style={{ fontSize: 11, color: am.color, fontWeight: 600 }}>{am.label}</span>
-                    <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-secondary)", fontFamily: "'SF Mono', monospace" }}>
-                      <span>TP: {m.avg_throughput?.toFixed(0)}</span>
-                      <span>WT: {m.avg_wait_time?.toFixed(0)}</span>
-                      <span>SF: {m.avg_safety_score?.toFixed(1)}</span>
+                  <div key={ak} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "8px 0", borderBottom: "1px solid var(--border-dim)" }}>
+                    <span style={{ fontSize: 12, color: am.color, fontWeight: 700 }}>{am.label}</span>
+                    <div style={{ display: "flex", gap: 14, fontSize: 11, fontFamily: "monospace", color: "var(--text-secondary)" }}>
+                      <span>TP:<span style={{ color: "#3b82f6", fontWeight: 700 }}>{m.avg_throughput?.toFixed(0)}</span></span>
+                      <span>WT:<span style={{ color: "#ef4444", fontWeight: 700 }}>{m.avg_wait_time?.toFixed(0)}</span></span>
+                      <span>SF:<span style={{ color: "#22c55e", fontWeight: 700 }}>{m.avg_safety_score?.toFixed(1)}</span></span>
                     </div>
                   </div>
                 )

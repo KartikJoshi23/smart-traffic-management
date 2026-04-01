@@ -9,21 +9,22 @@ const NAMES = [
   "DIP","Acad City","Al Barsha","Airport T3"
 ]
 const ZONES = ["DEIRA","DOWNTOWN","JUMEIRAH","SOUTH DUBAI"]
-const AGENT_META = {
-  q_learning: { label: "Q-Learning", color: "#3B82F6", desc: "Off-policy TD control" },
-  sarsa: { label: "SARSA", color: "#10B981", desc: "On-policy TD control" },
-  fixed_timer: { label: "Fixed Timer", color: "#EF4444", desc: "30s fixed cycle" },
+const ZONE_COLORS = ["#3b82f6","#a855f7","#f59e0b","#22c55e"]
+const AGENTS = {
+  q_learning: { label: "Q-Learning", color: "#3b82f6" },
+  sarsa: { label: "SARSA", color: "#22c55e" },
+  fixed_timer: { label: "Fixed Timer", color: "#ef4444" },
 }
-const ACTION_NAMES = ["HOLD", "SWITCH", "EXTEND"]
-const ACTION_COLORS = ["#3B82F6", "#F59E0B", "#8B5CF6"]
-const ttStyle = { background: "#1e1e21", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 8, color: "#f4f4f5", fontSize: 11 }
+const ACTIONS = ["HOLD","SWITCH","EXTEND"]
+const ACT_COLORS = ["#3b82f6","#f59e0b","#a855f7"]
+const TT = { background: "#18181b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#e4e4e7", fontSize: 11 }
 
-function getCongestion(qNS, qEW) {
-  const t = qNS + qEW
-  if (t < 8) return { color: "#10B981", label: "Low", ring: "rgba(16,185,129,0.25)" }
-  if (t < 20) return { color: "#F59E0B", label: "Moderate", ring: "rgba(245,158,11,0.25)" }
-  if (t < 40) return { color: "#F97316", label: "High", ring: "rgba(249,115,22,0.30)" }
-  return { color: "#EF4444", label: "Critical", ring: "rgba(239,68,68,0.35)" }
+function congLevel(ns, ew) {
+  const t = ns + ew
+  if (t < 8) return { color: "#22c55e", label: "LOW", bg: "rgba(34,197,94,0.15)" }
+  if (t < 20) return { color: "#f59e0b", label: "MED", bg: "rgba(245,158,11,0.15)" }
+  if (t < 40) return { color: "#f97316", label: "HIGH", bg: "rgba(249,115,22,0.18)" }
+  return { color: "#ef4444", label: "CRIT", bg: "rgba(239,68,68,0.20)" }
 }
 
 export default function LiveSimulation({ data }) {
@@ -36,9 +37,9 @@ export default function LiveSimulation({ data }) {
   const [step, setStep] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(400)
-  const [selectedInt, setSelectedInt] = useState(null)
-  const [chaos, setChaos] = useState({ sandstorm: false, sensorFail: false, emergency: false })
-  const intervalRef = useRef(null)
+  const [selInt, setSelInt] = useState(0)
+  const [chaos, setChaos] = useState({ sand: false, sensor: false, ems: false })
+  const ref = useRef(null)
 
   const frames = agents[agentType]
   const maxStep = frames ? frames.length - 1 : 0
@@ -46,286 +47,275 @@ export default function LiveSimulation({ data }) {
 
   useEffect(() => {
     if (playing && frames) {
-      intervalRef.current = setInterval(() => {
+      ref.current = setInterval(() => {
         setStep(s => s >= maxStep ? (setPlaying(false), s) : s + 1)
       }, speed)
     }
-    return () => clearInterval(intervalRef.current)
+    return () => clearInterval(ref.current)
   }, [playing, speed, maxStep, frames])
 
-  const rollingData = useMemo(() => {
+  const rolling = useMemo(() => {
     if (!frames) return []
-    const start = Math.max(0, step - 29)
-    return frames.slice(start, step + 1).map(f => ({
-      step: f.step,
-      queue: f.metrics.avg_queue,
-      throughput: f.metrics.throughput,
-      reward: f.rewards.reduce((a, b) => a + b, 0),
+    return frames.slice(Math.max(0, step - 29), step + 1).map(f => ({
+      s: f.step,
+      q: f.metrics.avg_queue,
+      tp: f.metrics.throughput,
+      rw: f.rewards.reduce((a, b) => a + b, 0),
     }))
   }, [frames, step])
 
-  if (!frames) return <p style={{ color: "var(--text-tertiary)" }}>No simulation data available</p>
+  if (!frames) return <p style={{ color: "var(--text-muted)" }}>No simulation data</p>
 
-  const agentColor = AGENT_META[agentType].color
+  const ac = AGENTS[agentType].color
   const grid = frame?.grid || []
-  const qVals = frame?.q_values || []
-  const selIdx = selectedInt !== null ? selectedInt : 0
-  const selInter = grid[selIdx]
-  const selAction = frame?.actions?.[selIdx]
-  const selReward = frame?.rewards?.[selIdx]
-  const selQV = qVals[selIdx]
+  const qv = frame?.q_values || []
+  const si = grid[selInt]
+  const sa = frame?.actions?.[selInt]
+  const sr = frame?.rewards?.[selInt]
+  const sqv = qv[selInt]
 
-  // XAI reasoning
-  let xaiReason = ""
-  let xaiConfidence = 50
-  let xaiFactors = []
-  if (selInter && selQV) {
-    const qv = selQV.q_values || [0, 0, 0]
-    const maxQ = Math.max(...qv)
-    const sortedQ = [...qv].sort((a, b) => b - a)
-    const qSpread = sortedQ[0] - sortedQ[1]
-    xaiConfidence = Math.min(98, Math.max(15, qSpread * 30 + 45))
+  // XAI
+  let reason = "", conf = 50, factors = []
+  if (si && sqv) {
+    const q = sqv.q_values || [0,0,0]
+    const sorted = [...q].sort((a,b) => b - a)
+    conf = Math.min(97, Math.max(20, (sorted[0] - sorted[1]) * 30 + 50))
     if (agentType === "fixed_timer") {
-      xaiConfidence = 100
-      xaiReason = "Fixed 30-second cycle timer (no adaptive logic)"
-      xaiFactors = ["Pre-programmed", "No learning"]
+      conf = 100; reason = "Fixed 30s cycle (no adaptive logic)"; factors = ["Pre-programmed"]
     } else {
-      const heavier = selInter.queue_ns >= selInter.queue_ew ? "NS" : "EW"
-      if (selAction === 0) {
-        xaiReason = "Maintain current phase - serving active queue direction"
-        xaiFactors.push("Q(Hold)=" + qv[0].toFixed(2), heavier + " heavier", "Phase " + (selInter.phase === 0 ? "NS" : "EW"))
-      } else if (selAction === 1) {
-        xaiReason = "Switch phase to serve waiting direction"
-        xaiFactors.push("Q(Switch)=" + qv[1].toFixed(2), "Imbalance detected", heavier + " congested")
-      } else {
-        xaiReason = "Extend green to clear remaining queue"
-        xaiFactors.push("Q(Extend)=" + qv[2].toFixed(2), "Near clearance", "Efficiency gain")
-      }
+      const heavier = si.queue_ns >= si.queue_ew ? "NS" : "EW"
+      if (sa === 0) { reason = "Hold current phase - active queue being served"; factors = ["Q(Hold)=" + q[0].toFixed(2), heavier + " heavier"] }
+      else if (sa === 1) { reason = "Switch phase - serve waiting direction"; factors = ["Q(Switch)=" + q[1].toFixed(2), "Imbalance"] }
+      else { reason = "Extend green - near clearance"; factors = ["Q(Ext)=" + q[2].toFixed(2), "Efficiency"] }
     }
   }
 
-  const confColor = xaiConfidence > 70 ? "var(--green)" : xaiConfidence > 40 ? "var(--amber)" : "var(--red)"
-
   return (
-    <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Controls Bar */}
-      <div className="card" style={{ padding: 14, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        {/* Agent Selection */}
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Control Bar */}
+      <div className="card" style={{ padding: 14, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", borderLeft: "3px solid " + ac }}>
         <div style={{ display: "flex", gap: 4 }}>
-          {Object.entries(AGENT_META).map(([k, v]) => (
+          {Object.entries(AGENTS).map(([k, v]) => (
             <button key={k} onClick={() => { setAgentType(k); setStep(0); setPlaying(false) }}
-              className={"btn btn-sm " + (agentType === k ? "btn-outline active" : "btn-outline")}
+              className={"btn btn-sm " + (agentType === k ? "btn-ghost active" : "btn-ghost")}
               style={agentType === k ? { borderColor: v.color, color: v.color } : {}}>
               {v.label}
             </button>
           ))}
         </div>
-
-        <div style={{ width: 1, height: 24, background: "var(--border-default)" }} />
-
-        {/* Playback */}
-        <div style={{ display: "flex", gap: 4 }}>
-          <button onClick={() => setPlaying(!playing)} className="btn btn-sm btn-primary">
-            {playing ? <Pause size={12} /> : <Play size={12} />}
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button onClick={() => { setStep(0); setPlaying(false) }} className="btn btn-sm btn-outline">
-            <RotateCcw size={12} /> Reset
-          </button>
-        </div>
-
-        {/* Speed */}
+        <div style={{ width: 1, height: 24, background: "var(--border-base)" }}/>
+        <button onClick={() => setPlaying(!playing)} className="btn btn-sm btn-fill" style={{ "--accent-color": ac }}>
+          {playing ? <Pause size={12}/> : <Play size={12}/>}
+          {playing ? "Pause" : "Play"}
+        </button>
+        <button onClick={() => { setStep(0); setPlaying(false) }} className="btn btn-sm btn-ghost">
+          <RotateCcw size={12}/> Reset
+        </button>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Speed</span>
-          <input type="range" min={50} max={800} value={800 - speed} onChange={e => setSpeed(800 - +e.target.value)} style={{ width: 80 }} />
+          <span style={{ fontSize: 10, color: "var(--text-faint)" }}>Speed</span>
+          <input type="range" min={50} max={800} value={800 - speed} onChange={e => setSpeed(800 - +e.target.value)} style={{ width: 80 }}/>
         </div>
-
-        {/* Step indicator */}
-        <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-tertiary)", fontFamily: "'SF Mono', monospace" }}>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>
           Step {step} / {maxStep}
         </div>
       </div>
 
       {/* Chaos Mode */}
-      <div className="card" style={{ padding: 12, display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)" }}>STRESS TEST:</span>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Stress Test:</span>
         {[
-          { key: "sandstorm", icon: CloudRain, label: "Sandstorm", color: "var(--amber)" },
-          { key: "sensorFail", icon: AlertTriangle, label: "Sensor Fail", color: "var(--red)" },
-          { key: "emergency", icon: Ambulance, label: "Emergency", color: "var(--blue)" },
+          { key: "sand", icon: CloudRain, label: "Sandstorm", color: "#f59e0b" },
+          { key: "sensor", icon: AlertTriangle, label: "Sensor Fail", color: "#ef4444" },
+          { key: "ems", icon: Ambulance, label: "Emergency", color: "#3b82f6" },
         ].map(c => (
-          <button key={c.key}
-            onClick={() => setChaos(prev => ({ ...prev, [c.key]: !prev[c.key] }))}
-            className={"btn btn-sm " + (chaos[c.key] ? "btn-outline active" : "btn-outline")}
+          <button key={c.key} onClick={() => setChaos(p => ({ ...p, [c.key]: !p[c.key] }))}
+            className={"btn btn-sm " + (chaos[c.key] ? "btn-ghost active" : "btn-ghost")}
             style={chaos[c.key] ? { borderColor: c.color, color: c.color } : {}}>
-            <c.icon size={12} /> {c.label}
+            <c.icon size={12}/> {c.label}
           </button>
         ))}
-        {Object.values(chaos).some(v => v) && (
-          <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 8, fontStyle: "italic" }}>
-            {chaos.sandstorm && "Capacity -45% "}{chaos.sensorFail && "Random noise "}{chaos.emergency && "Priority routing "}
-          </span>
-        )}
       </div>
 
-      {/* Main Layout: SVG Grid + Side Panel */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 14 }}>
-        {/* SVG Traffic Grid */}
-        <div className="card" style={{ padding: 16 }}>
-          <div className="section-title">
-            <span className="section-dot" style={{ background: agentColor }} />
-            Intersection Network — {AGENT_META[agentType].label}
-          </div>
-          <svg viewBox="0 0 700 700" style={{ width: "100%", maxHeight: 520, background: "#0a0a0c", borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)" }}>
-            {/* Zone labels */}
-            {ZONES.map((z, i) => (
-              <text key={z} x={18} y={116 + i * 160} fill="#3f3f46" fontSize="9" fontWeight="600" fontFamily="Inter" letterSpacing="0.05em">{z}</text>
-            ))}
+      {/* Main: SVG + Side Panel */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
+        {/* SVG Grid */}
+        <div className="card" style={{ padding: 20 }}>
+          <svg viewBox="0 0 720 720" style={{ width: "100%", maxHeight: 560, borderRadius: 10 }}>
+            {/* Background */}
+            <rect width="720" height="720" fill="#0f0f12" rx="10"/>
 
-            {/* Roads - vertical */}
-            {[0,1,2,3].map(i => {
-              const x = 130 + i * 150
-              return <g key={"rv" + i}>
-                <rect x={x - 13} y={50} width={26} height={640} fill="#18181b" rx="2" />
-                <line x1={x} y1={50} x2={x} y2={690} stroke="#27272a" strokeWidth="1" strokeDasharray="6 6" />
-              </g>
-            })}
-            {/* Roads - horizontal */}
-            {[0,1,2,3].map(i => {
-              const y = 110 + i * 160
-              return <g key={"rh" + i}>
-                <rect x={50} y={y - 13} width={640} height={26} fill="#18181b" rx="2" />
-                <line x1={50} y1={y} x2={690} y2={y} stroke="#27272a" strokeWidth="1" strokeDasharray="6 6" />
-              </g>
-            })}
+            {/* Grid pattern */}
+            <defs>
+              <pattern id="gridP" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="720" height="720" fill="url(#gridP)"/>
 
             {/* Sandstorm overlay */}
-            {chaos.sandstorm && <rect x="0" y="0" width="700" height="700" fill="rgba(245,158,11,0.06)" rx="8" />}
+            {chaos.sand && <rect width="720" height="720" fill="rgba(245,158,11,0.05)" rx="10"/>}
+
+            {/* Zone labels - left side, colored */}
+            {ZONES.map((z, i) => (
+              <text key={z} x={22} y={118 + i * 155} fill={ZONE_COLORS[i]} fontSize="10" fontWeight="800" fontFamily="Inter" opacity="0.7">{z}</text>
+            ))}
+
+            {/* Roads - Horizontal */}
+            {[0,1,2,3].map(i => {
+              const y = 110 + i * 155
+              return <g key={"rh"+i}>
+                <rect x={55} y={y-15} width={640} height={30} fill="#1a1a1f" rx="2"/>
+                <line x1={55} y1={y} x2={695} y2={y} stroke="#2a2a30" strokeWidth="1" strokeDasharray="8 6"/>
+                {/* Direction arrows */}
+                <text x={65} y={y-5} fill="#333" fontSize="8" fontFamily="Inter">{String.fromCharCode(9654)}</text>
+                <text x={65} y={y+8} fill="#333" fontSize="8" fontFamily="Inter">{String.fromCharCode(9664)}</text>
+              </g>
+            })}
+
+            {/* Roads - Vertical */}
+            {[0,1,2,3].map(i => {
+              const x = 140 + i * 155
+              return <g key={"rv"+i}>
+                <rect x={x-15} y={55} width={30} height={640} fill="#1a1a1f" rx="2"/>
+                <line x1={x} y1={55} x2={x} y2={695} stroke="#2a2a30" strokeWidth="1" strokeDasharray="8 6"/>
+              </g>
+            })}
 
             {/* Intersections */}
             {grid.map((inter, i) => {
-              const row = Math.floor(i / 4)
-              const col = i % 4
-              const cx = 130 + col * 150
-              const cy = 110 + row * 160
-              const cong = getCongestion(inter.queue_ns, inter.queue_ew)
-              const isSelected = selectedInt === i
-              const hasSensorFail = chaos.sensorFail && (i % 3 === step % 3)
-              const hasEmergency = chaos.emergency && i === (step % 16)
+              const row = Math.floor(i / 4), col = i % 4
+              const cx = 140 + col * 155, cy = 110 + row * 155
+              const cg = congLevel(inter.queue_ns, inter.queue_ew)
+              const isSel = selInt === i
+              const hasFail = chaos.sensor && (i % 3 === step % 3)
+              const hasEms = chaos.ems && i === (step % 16)
+              const zoneColor = ZONE_COLORS[row]
 
               return (
-                <g key={i} onClick={() => setSelectedInt(i)} style={{ cursor: "pointer" }}>
-                  {/* Intersection box */}
-                  <rect x={cx - 16} y={cy - 16} width={32} height={32} rx={4} fill="#111113" stroke={isSelected ? "#ffffff" : cong.color} strokeWidth={isSelected ? 2 : 1.5} opacity={1} />
+                <g key={i} onClick={() => setSelInt(i)} style={{ cursor: "pointer" }}>
+                  {/* Selection ring */}
+                  {isSel && <circle cx={cx} cy={cy} r={30} fill="none" stroke="white" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.5}/>}
 
-                  {/* Phase indicator (traffic light dots) */}
-                  <circle cx={cx - 5} cy={cy - 3} r={3} fill={inter.phase === 0 ? "#10B981" : "#27272a"} />
-                  <circle cx={cx + 5} cy={cy - 3} r={3} fill={inter.phase === 1 ? "#10B981" : "#27272a"} />
-                  <text x={cx} y={cy + 7} textAnchor="middle" fill={cong.color} fontSize="6" fontWeight="700" fontFamily="Inter">{cong.label.toUpperCase()}</text>
+                  {/* Emergency pulse */}
+                  {hasEms && <circle cx={cx} cy={cy} r={26} fill="none" stroke="#3b82f6" strokeWidth={2} opacity={0.6}>
+                    <animate attributeName="r" values="26;34;26" dur="1s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1s" repeatCount="indefinite"/>
+                  </circle>}
 
-                  {/* Queue bars - NS (up) and EW (right) */}
-                  {inter.queue_ns > 0 && <rect x={cx - 3} y={cy - 20 - Math.min(inter.queue_ns * 1.2, 30)} width={6} height={Math.min(inter.queue_ns * 1.2, 30)} fill="#3B82F6" opacity={0.7} rx={1} />}
-                  {inter.queue_ew > 0 && <rect x={cx + 20} y={cy - 3} width={Math.min(inter.queue_ew * 1.2, 30)} height={6} fill="#F59E0B" opacity={0.7} rx={1} />}
+                  {/* Congestion glow */}
+                  <circle cx={cx} cy={cy} r={22} fill={cg.bg}/>
 
-                  {/* Name label */}
-                  <text x={cx} y={cy + 28} textAnchor="middle" fill="#71717a" fontSize="7" fontFamily="Inter">{NAMES[i]}</text>
+                  {/* Main circle */}
+                  <circle cx={cx} cy={cy} r={18} fill="#111115" stroke={cg.color} strokeWidth={isSel ? 2.5 : 1.5}/>
 
-                  {/* Action badge - positioned top-right */}
+                  {/* Traffic light dots inside */}
+                  <circle cx={cx-5} cy={cy-2} r={3.5} fill={inter.phase === 0 ? "#22c55e" : "#27272a"} stroke={inter.phase === 0 ? "#22c55e40" : "none"} strokeWidth={2}/>
+                  <circle cx={cx+5} cy={cy-2} r={3.5} fill={inter.phase === 1 ? "#22c55e" : "#27272a"} stroke={inter.phase === 1 ? "#22c55e40" : "none"} strokeWidth={2}/>
+
+                  {/* Phase labels */}
+                  <text x={cx-5} y={cy+8} textAnchor="middle" fill="#52525b" fontSize="5" fontFamily="Inter">NS</text>
+                  <text x={cx+5} y={cy+8} textAnchor="middle" fill="#52525b" fontSize="5" fontFamily="Inter">EW</text>
+
+                  {/* NS Queue bar (upward) */}
+                  {inter.queue_ns > 0 && <>
+                    <rect x={cx-4} y={cy - 22 - Math.min(inter.queue_ns * 1.5, 40)} width={8} height={Math.min(inter.queue_ns * 1.5, 40)} fill="#3b82f6" opacity={0.6} rx={2}/>
+                    <text x={cx} y={cy - 25 - Math.min(inter.queue_ns * 1.5, 40)} textAnchor="middle" fill="#60a5fa" fontSize="7" fontWeight="700">{chaos.sensor && hasFail ? "?" : inter.queue_ns}</text>
+                  </>}
+
+                  {/* EW Queue bar (rightward) */}
+                  {inter.queue_ew > 0 && <>
+                    <rect x={cx + 22} y={cy-4} width={Math.min(inter.queue_ew * 1.5, 40)} height={8} fill="#f59e0b" opacity={0.6} rx={2}/>
+                    <text x={cx + 25 + Math.min(inter.queue_ew * 1.5, 40)} y={cy+3} fill="#fbbf24" fontSize="7" fontWeight="700">{chaos.sensor && hasFail ? "?" : inter.queue_ew}</text>
+                  </>}
+
+                  {/* Name */}
+                  <text x={cx} y={cy+36} textAnchor="middle" fill="#71717a" fontSize="7.5" fontWeight="500" fontFamily="Inter">{NAMES[i]}</text>
+
+                  {/* Action badge */}
                   {frame?.actions?.[i] != null && (
                     <g>
-                      <rect x={cx + 10} y={cy - 28} width={24} height={10} rx={2} fill={ACTION_COLORS[frame.actions[i]]} opacity={0.85} />
-                      <text x={cx + 22} y={cy - 20} textAnchor="middle" fill="white" fontSize="5" fontWeight="700" fontFamily="Inter">
-                        {ACTION_NAMES[frame.actions[i]].slice(0, 3)}
-                      </text>
+                      <rect x={cx-14} y={cy-36} width={28} height={12} rx={3} fill={ACT_COLORS[frame.actions[i]]} opacity={0.9}/>
+                      <text x={cx} y={cy-27.5} textAnchor="middle" fill="white" fontSize="6" fontWeight="700" fontFamily="Inter">{ACTIONS[frame.actions[i]]}</text>
                     </g>
                   )}
 
-                  {/* Sensor fail indicator */}
-                  {hasSensorFail && (
-                    <text x={cx + 20} y={cy - 18} fill="#EF4444" fontSize="14" fontWeight="bold">!</text>
-                  )}
-
-                  {/* Emergency indicator */}
-                  {hasEmergency && (
-                    <circle cx={cx} cy={cy} r={28} fill="none" stroke="#3B82F6" strokeWidth={2} strokeDasharray="4 4" opacity={0.8}>
-                      <animate attributeName="r" values="28;34;28" dur="1s" repeatCount="indefinite" />
-                    </circle>
-                  )}
-
-                  {/* Selection highlight */}
-                  {isSelected && (
-                    <circle cx={cx} cy={cy} r={28} fill="none" stroke="white" strokeWidth={1} opacity={0.5} strokeDasharray="3 3" />
-                  )}
+                  {/* Sensor fail */}
+                  {hasFail && <text x={cx+16} y={cy-12} fill="#ef4444" fontSize="12" fontWeight="bold">!</text>}
                 </g>
               )
             })}
 
             {/* Legend */}
-            <g transform="translate(540, 640)">
-              <rect x={0} y={0} width={8} height={8} fill="#3B82F6" rx={1} />
-              <text x={12} y={7} fill="#71717a" fontSize="8" fontFamily="Inter">NS Queue</text>
-              <rect x={65} y={0} width={8} height={8} fill="#F59E0B" rx={1} />
-              <text x={77} y={7} fill="#71717a" fontSize="8" fontFamily="Inter">EW Queue</text>
+            <g transform="translate(480, 688)">
+              <rect x={0} y={-4} width={10} height={10} fill="#3b82f6" rx={2} opacity={0.6}/>
+              <text x={14} y={4} fill="#71717a" fontSize="9" fontFamily="Inter">NS Queue</text>
+              <rect x={80} y={-4} width={10} height={10} fill="#f59e0b" rx={2} opacity={0.6}/>
+              <text x={94} y={4} fill="#71717a" fontSize="9" fontFamily="Inter">EW Queue</text>
+              <circle cx={175} cy={1} r={4} fill="#22c55e" opacity={0.5}/>
+              <text x={183} y={4} fill="#71717a" fontSize="9" fontFamily="Inter">Green Phase</text>
             </g>
           </svg>
         </div>
 
         {/* Right Panel */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* XAI Panel */}
-          <div className="card" style={{ padding: 16, borderLeft: "3px solid " + agentColor }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-              <Brain size={14} style={{ color: agentColor }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>Decision Logic</span>
-              <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>{NAMES[selIdx]}</span>
+          {/* XAI Decision Logic */}
+          <div className="card" style={{ padding: 18, borderLeft: "3px solid " + ac }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+              <Brain size={15} style={{ color: ac }}/>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "var(--text-white)" }}>Decision Logic</span>
+              <span style={{ fontSize: 10, color: "var(--text-faint)", marginLeft: "auto" }}>{NAMES[selInt]}</span>
             </div>
 
-            {/* Action taken */}
-            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-              {ACTION_NAMES.map((a, i) => (
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
+              {ACTIONS.map((a, i) => (
                 <div key={a} style={{
-                  flex: 1, padding: "6px 8px", borderRadius: 6, textAlign: "center",
-                  fontSize: 10, fontWeight: 600,
-                  background: selAction === i ? ACTION_COLORS[i] : "var(--bg-surface-2)",
-                  color: selAction === i ? "white" : "var(--text-muted)",
-                  border: "1px solid " + (selAction === i ? ACTION_COLORS[i] : "var(--border-subtle)")
+                  flex: 1, padding: "8px", borderRadius: 8, textAlign: "center",
+                  fontSize: 11, fontWeight: 700,
+                  background: sa === i ? ACT_COLORS[i] : "var(--bg-elevated)",
+                  color: sa === i ? "white" : "var(--text-faint)",
+                  border: sa === i ? "none" : "1px solid var(--border-dim)"
                 }}>{a}</div>
               ))}
             </div>
 
             {/* Confidence */}
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 4 }}>
-                <span style={{ color: "var(--text-muted)" }}>Confidence</span>
-                <span style={{ color: confColor, fontWeight: 700 }}>{xaiConfidence.toFixed(0)}%</span>
+                <span style={{ color: "var(--text-faint)", fontWeight: 600 }}>CONFIDENCE</span>
+                <span style={{ color: conf > 70 ? "#22c55e" : conf > 40 ? "#f59e0b" : "#ef4444", fontWeight: 800 }}>{conf.toFixed(0)}%</span>
               </div>
-              <div style={{ height: 4, background: "var(--bg-elevated)", borderRadius: 4 }}>
-                <div style={{ width: xaiConfidence + "%", height: "100%", background: confColor, borderRadius: 4, transition: "width 0.3s" }} />
+              <div style={{ height: 6, background: "var(--bg-elevated)", borderRadius: 6 }}>
+                <div style={{ width: conf + "%", height: "100%", borderRadius: 6, transition: "width 0.3s",
+                  background: conf > 70 ? "#22c55e" : conf > 40 ? "#f59e0b" : "#ef4444" }}/>
               </div>
             </div>
 
             {/* Reasoning */}
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 8, padding: "8px 10px", background: "var(--bg-surface-2)", borderRadius: 6, border: "1px solid var(--border-subtle)" }}>
-              <Info size={10} style={{ display: "inline", marginRight: 4, color: "var(--text-muted)" }} />
-              {xaiReason || "Select an intersection to view decision logic"}
+            <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6, padding: "10px 12px",
+              background: "var(--bg-elevated)", borderRadius: 8 }}>
+              {reason || "Click an intersection to view decision logic"}
             </div>
 
             {/* Factors */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {xaiFactors.map((f, i) => (
-                <span key={i} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: "var(--bg-elevated)", color: "var(--text-tertiary)", border: "1px solid var(--border-subtle)" }}>{f}</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+              {factors.map((f, i) => (
+                <span key={i} style={{ fontSize: 9, padding: "3px 8px", borderRadius: 4,
+                  background: "var(--bg-input)", color: "var(--text-secondary)", fontFamily: "monospace" }}>{f}</span>
               ))}
             </div>
 
             {/* Q-values */}
-            {selQV && selQV.q_values && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border-subtle)" }}>
-                <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 4 }}>Q-Values</div>
-                <div style={{ display: "flex", gap: 4 }}>
-                  {selQV.q_values.map((q, i) => (
-                    <div key={i} style={{ flex: 1, textAlign: "center", padding: "4px", borderRadius: 4, background: selAction === i ? "rgba(255,255,255,0.05)" : "transparent" }}>
-                      <div style={{ fontSize: 8, color: ACTION_COLORS[i] }}>{ACTION_NAMES[i]}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", fontFamily: "'SF Mono', monospace" }}>{q.toFixed(3)}</div>
+            {sqv?.q_values && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-dim)" }}>
+                <div style={{ fontSize: 10, color: "var(--text-faint)", fontWeight: 700, marginBottom: 6 }}>Q-VALUES</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {sqv.q_values.map((q, i) => (
+                    <div key={i} style={{ flex: 1, textAlign: "center", padding: 6, borderRadius: 6,
+                      background: sa === i ? ACT_COLORS[i] + "18" : "var(--bg-input)" }}>
+                      <div style={{ fontSize: 8, color: ACT_COLORS[i], fontWeight: 600 }}>{ACTIONS[i]}</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-white)", fontFamily: "monospace" }}>{q.toFixed(3)}</div>
                     </div>
                   ))}
                 </div>
@@ -336,46 +326,43 @@ export default function LiveSimulation({ data }) {
           {/* Live Metrics */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {[
-              { label: "Avg Queue", value: frame?.metrics?.avg_queue?.toFixed(1), color: "var(--blue)" },
-              { label: "Throughput", value: frame?.metrics?.throughput, color: "var(--green)" },
-              { label: "Total Reward", value: frame?.rewards?.reduce((a,b) => a+b, 0).toFixed(1), color: "var(--violet)" },
-              { label: "Emissions", value: frame?.metrics?.emissions?.toFixed(1), color: "var(--amber)" },
+              { label: "Avg Queue", val: frame?.metrics?.avg_queue?.toFixed(1), color: "#3b82f6" },
+              { label: "Throughput", val: frame?.metrics?.throughput, color: "#22c55e" },
+              { label: "Reward", val: frame?.rewards?.reduce((a,b) => a+b, 0).toFixed(1), color: "#a855f7" },
+              { label: "Emissions", val: frame?.metrics?.emissions?.toFixed(1), color: "#f59e0b" },
             ].map((m, i) => (
-              <div key={i} className="metric-card" style={{ padding: 10 }}>
+              <div key={i} className="metric-box">
                 <div className="metric-label">{m.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: m.color }}>{chaos.sensorFail ? "~" + m.value : m.value}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: m.color }}>{chaos.sensor ? "~" + m.val : m.val}</div>
               </div>
             ))}
           </div>
 
           {/* Rolling Chart */}
           <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8 }}>ROLLING METRICS (Last 30 Steps)</div>
-            <ResponsiveContainer width="100%" height={140}>
-              <LineChart data={rollingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="step" tick={{ fill: "#52525b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#52525b", fontSize: 9 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={ttStyle} />
-                <Line type="monotone" dataKey="queue" stroke="#3B82F6" strokeWidth={1.5} dot={false} name="Avg Queue" />
-                <Line type="monotone" dataKey="throughput" stroke="#10B981" strokeWidth={1.5} dot={false} name="Throughput" />
+            <div className="metric-label" style={{ marginBottom: 8 }}>ROLLING METRICS (30 Steps)</div>
+            <ResponsiveContainer width="100%" height={130}>
+              <LineChart data={rolling}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)"/>
+                <XAxis dataKey="s" tick={{ fill: "#52525b", fontSize: 9 }} axisLine={false} tickLine={false}/>
+                <YAxis tick={{ fill: "#52525b", fontSize: 9 }} axisLine={false} tickLine={false}/>
+                <Tooltip contentStyle={TT}/>
+                <Line type="monotone" dataKey="q" stroke="#3b82f6" strokeWidth={1.5} dot={false} name="Queue"/>
+                <Line type="monotone" dataKey="tp" stroke="#22c55e" strokeWidth={1.5} dot={false} name="Throughput"/>
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* Action Grid */}
           <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8 }}>ACTIONS THIS STEP</div>
+            <div className="metric-label" style={{ marginBottom: 8 }}>ACTIONS THIS STEP</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4 }}>
               {(frame?.actions || []).map((a, i) => (
-                <div key={i} onClick={() => setSelectedInt(i)}
-                  style={{
-                    padding: "4px", borderRadius: 4, textAlign: "center", cursor: "pointer",
-                    background: ACTION_COLORS[a] + "18",
-                    border: selectedInt === i ? "1px solid " + ACTION_COLORS[a] : "1px solid transparent",
-                    fontSize: 8, fontWeight: 600, color: ACTION_COLORS[a]
-                  }}>
-                  {ACTION_NAMES[a]}
+                <div key={i} onClick={() => setSelInt(i)}
+                  style={{ padding: 6, borderRadius: 6, textAlign: "center", cursor: "pointer",
+                    background: ACT_COLORS[a] + "15", border: selInt === i ? "1px solid " + ACT_COLORS[a] : "1px solid transparent",
+                    fontSize: 8, fontWeight: 700, color: ACT_COLORS[a] }}>
+                  {ACTIONS[a]}
                 </div>
               ))}
             </div>

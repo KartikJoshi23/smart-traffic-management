@@ -7,23 +7,12 @@ import ScenarioComparison from "./components/ScenarioComparison"
 import MCDMAnalysis from "./components/MCDMAnalysis"
 
 const TABS = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard, color: "var(--blue)" },
-  { id: "live", label: "Live Simulation", icon: Play, color: "var(--green)" },
-  { id: "training", label: "Training Analysis", icon: TrendingUp, color: "var(--amber)" },
-  { id: "scenarios", label: "Scenario Comparison", icon: GitCompare, color: "var(--violet)" },
-  { id: "mcdm", label: "MCDM Evaluation", icon: Scale, color: "var(--teal)" },
+  { id: "overview", label: "Dashboard", icon: LayoutDashboard, color: "#3b82f6" },
+  { id: "live", label: "Live Simulation", icon: Play, color: "#22c55e" },
+  { id: "training", label: "Training Analysis", icon: TrendingUp, color: "#f59e0b" },
+  { id: "scenarios", label: "Scenario Comparison", icon: GitCompare, color: "#a855f7" },
+  { id: "mcdm", label: "MCDM Evaluation", icon: Scale, color: "#06b6d4" },
 ]
-
-function TrafficLightIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <rect x="7" y="1" width="14" height="26" rx="4" fill="#262629" stroke="#3f3f46" strokeWidth="1"/>
-      <circle cx="14" cy="7" r="3" fill="#EF4444" opacity="0.9"/>
-      <circle cx="14" cy="14" r="3" fill="#F59E0B" opacity="0.9"/>
-      <circle cx="14" cy="21" r="3" fill="#10B981" opacity="0.9"/>
-    </svg>
-  )
-}
 
 export default function App() {
   const [tab, setTab] = useState("overview")
@@ -31,93 +20,103 @@ export default function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function loadData() {
+    async function load() {
       try {
         const files = [
           "training_results", "mcdm_results", "scenario_comparison",
           "intersection_meta", "live_simulation_q_learning",
           "live_simulation_sarsa", "live_simulation_fixed_timer",
         ]
-        const results = {}
+        const r = {}
         for (const f of files) {
-          try {
-            const res = await fetch("/data/" + f + ".json")
-            if (res.ok) results[f] = await res.json()
-          } catch {}
+          try { const res = await fetch("/data/" + f + ".json"); if (res.ok) r[f] = await res.json() } catch {}
         }
-        setData(results)
+        setData(r)
       } finally { setLoading(false) }
     }
-    loadData()
+    load()
   }, [])
 
-  return (
-    <div className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
-      <div className="accent-bar" />
+  const activeColor = TABS.find(t => t.id === tab)?.color || "#3b82f6"
 
-      <header style={{ background: "var(--bg-surface)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "12px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <TrafficLightIcon />
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
+      {/* Header */}
+      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-dim)" }}>
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/* Traffic light SVG */}
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--bg-elevated)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-base)" }}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="4" r="2.5" fill="#ef4444"/>
+                <circle cx="9" cy="9" r="2.5" fill="#f59e0b"/>
+                <circle cx="9" cy="14" r="2.5" fill="#22c55e"/>
+              </svg>
+            </div>
             <div>
-              <h1 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+              <h1 style={{ fontSize: 16, fontWeight: 800, color: "var(--text-white)", letterSpacing: "-0.02em" }}>
                 Dubai Smart Traffic Management
               </h1>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>
-                Multi-Agent RL · Q-Learning & SARSA · WSM & TOPSIS Decision Analysis
+              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                Multi-Agent Reinforcement Learning \u00b7 Q-Learning & SARSA \u00b7 WSM & TOPSIS
               </p>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <a href="https://github.com/KartikJoshi23/smart-traffic-management" target="_blank" rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 12px", borderRadius: 6, background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)", color: "var(--text-tertiary)", fontSize: 11, textDecoration: "none", fontWeight: 500 }}>
-              GitHub <ExternalLink size={10} />
+              className="btn btn-ghost btn-sm" style={{ textDecoration: "none" }}>
+              GitHub <ExternalLink size={11}/>
             </a>
-            <div className="badge-green" style={{ gap: 5, padding: "4px 10px" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)", display: "inline-block", animation: "pulse-live 2s ease-in-out infinite" }} />
+            <div className="badge-green" style={{ padding: "5px 12px", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", display: "inline-block", animation: "pulse 2s infinite" }}/>
               System Online
             </div>
           </div>
         </div>
       </header>
 
-      <nav style={{ background: "var(--bg-surface)", borderBottom: "1px solid var(--border-subtle)" }}>
-        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "0 28px", display: "flex", gap: 2, overflowX: "auto" }}>
+      {/* Navigation - each tab colored */}
+      <nav style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-dim)" }}>
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 32px", display: "flex", gap: 0 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`nav-pill ${tab === t.id ? "active" : ""}`}>
-              <t.icon size={15} style={tab === t.id ? { color: t.color } : {}} />
+              className={"nav-tab" + (tab === t.id ? " active" : "")}
+              style={{ "--accent-color": t.color }}>
+              <t.icon size={15} style={{ color: tab === t.id ? t.color : undefined }}/>
               {t.label}
             </button>
           ))}
         </div>
       </nav>
 
-      <main style={{ maxWidth: 1440, margin: "0 auto", padding: "24px 28px" }}>
+      {/* Content */}
+      <main style={{ maxWidth: 1480, margin: "0 auto", padding: "28px 32px" }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: "var(--text-tertiary)" }}>Loading simulation data...</div>
+          <div style={{ textAlign: "center", padding: 80, color: "var(--text-muted)" }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Loading simulation data...</div>
+          </div>
         ) : (
           <>
-            {tab === "overview" && <Overview data={data} />}
-            {tab === "live" && <LiveSimulation data={data} />}
-            {tab === "training" && <TrainingCurves data={data} />}
-            {tab === "scenarios" && <ScenarioComparison data={data} />}
-            {tab === "mcdm" && <MCDMAnalysis data={data} />}
+            {tab === "overview" && <Overview data={data}/>}
+            {tab === "live" && <LiveSimulation data={data}/>}
+            {tab === "training" && <TrainingCurves data={data}/>}
+            {tab === "scenarios" && <ScenarioComparison data={data}/>}
+            {tab === "mcdm" && <MCDMAnalysis data={data}/>}
           </>
         )}
       </main>
 
-      <footer style={{ borderTop: "1px solid var(--border-subtle)", padding: "20px 28px", textAlign: "center" }}>
+      {/* Footer */}
+      <footer style={{ borderTop: "1px solid var(--border-dim)", padding: "24px 32px", textAlign: "center" }}>
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-          Made with <span style={{ color: "#EF4444" }}>❤️</span> by{" "}
-          <span style={{ color: "var(--text-secondary)" }}>Kartik Joshi</span> •{" "}
-          <span style={{ color: "var(--text-secondary)" }}>Anurag Deverakonda</span> •{" "}
-          <span style={{ color: "var(--text-secondary)" }}>Nandana Santosh</span> •{" "}
-          <span style={{ color: "var(--text-secondary)" }}>Weiqi Liu</span> •{" "}
-          <span style={{ color: "var(--text-secondary)" }}>Advait Dalvi</span> •{" "}
-          <span style={{ color: "var(--text-secondary)" }}>Gautam Barai</span>
+          Made with <span style={{ color: "#ef4444" }}>{String.fromCodePoint(10084)}{String.fromCodePoint(65039)}</span> by{" "}
+          {["Kartik Joshi","Anurag Deverakonda","Nandana Santosh","Weiqi Liu","Advait Dalvi","Gautam Barai"].map((n,i,a) => (
+            <span key={n}><span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{n}</span>{i < a.length-1 ? <span style={{ color: "var(--text-faint)", margin: "0 8px" }}>{String.fromCharCode(8226)}</span> : ""}</span>
+          ))}
         </p>
-        <p style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 6 }}>MAIB · RDMU · Group 2</p>
+        <p style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 8 }}>
+          MAIB {String.fromCharCode(183)} RDMU {String.fromCharCode(183)} Group 2
+        </p>
       </footer>
     </div>
   )
