@@ -125,6 +125,7 @@ class TrafficEnvironment:
 
         # Bus routes (predefined paths through the grid)
         self.bus_routes = self._create_bus_routes()
+        self.total_bus_delay = 0  # Track actual bus delays
 
         # Metrics history
         self.episode_metrics = {
@@ -194,6 +195,7 @@ class TrafficEnvironment:
         self.current_step = 0
         self.current_hour = 8
         self.active_emergencies = []
+        self.total_bus_delay = 0
 
         for intersection in self.intersections:
             intersection.reset()
@@ -301,6 +303,9 @@ class TrafficEnvironment:
         # Handle bus priority
         if self.scenario_config["bus_priority"]:
             self._process_bus_priority()
+        else:
+            # Track bus delays passively even without priority
+            self._process_bus_priority()
 
         done = self.current_step >= self.time_steps_per_episode
 
@@ -376,9 +381,16 @@ class TrafficEnvironment:
         step_emissions = idle_vehicles * emission_rate
         intersection.total_emissions += step_emissions
 
-        # Safety: near-misses from phase changes
+        # Safety: near-misses from phase changes and queue overflow
         if intersection.is_yellow:
-            intersection.near_misses += np.random.binomial(1, 0.05)
+            # Higher near-miss probability during yellow phases
+            intersection.near_misses += np.random.binomial(1, 0.08)
+        # Queue overflow causes safety issues (vehicles blocking intersections)
+        if intersection.queue_ns + intersection.queue_ew > 30:
+            intersection.near_misses += np.random.binomial(1, 0.03)
+        # Short green phases cause confusion (rapid signaling)
+        if intersection.is_yellow and intersection.phase_timer < 8:
+            intersection.near_misses += np.random.binomial(1, 0.12)
 
         # Calculate reward using PER-STEP deltas (not cumulative)
         post_queue = intersection.queue_ns + intersection.queue_ew
@@ -448,17 +460,25 @@ class TrafficEnvironment:
                                     if e["remaining_steps"] > 0]
 
     def _process_bus_priority(self):
-        """Give signal priority to bus routes."""
+        """Give signal priority to bus routes and track bus delay."""
         for route in self.bus_routes:
             if np.random.random() < route["frequency"]:
                 # Bus is at a random intersection on its route
                 bus_at = np.random.choice(route["path"])
                 intersection = self.intersections[bus_at]
+                # Bus delay = queue at intersection when bus arrives
+                self.total_bus_delay += intersection.queue_ns + intersection.queue_ew
                 # Extend green for bus direction (reduce bus delay)
                 if intersection.queue_ns > intersection.queue_ew:
                     if intersection.phase != 0:
                         intersection.phase = 0
                         intersection.phase_timer = 0
+        # Even in non-bus-priority scenarios, track bus delay passively
+        if not self.scenario_config["bus_priority"]:
+            for route in self.bus_routes:
+                if np.random.random() < route["frequency"] * 0.5:
+                    bus_at = np.random.choice(route["path"])
+                    self.total_bus_delay += self.intersections[bus_at].queue_ns + self.intersections[bus_at].queue_ew
 
     def get_episode_summary(self):
         """Get summary metrics for the current episode."""
@@ -469,9 +489,11 @@ class TrafficEnvironment:
         total_near_misses = sum(i.near_misses for i in self.intersections)
         total_stops = sum(i.total_stops for i in self.intersections)
 
-        # Normalize safety score: near-misses per intersection, stops per 100 vehicles
+        # Normalize safety score
         near_miss_rate = total_near_misses / max(1, self.NUM_INTERSECTIONS)
-        stop_rate = total_stops / max(1, total_throughput) * 100  # stops per 100 vehicles
+        stop_rate = total_stops / max(1, total_throughput) * 100
+        # Phase change frequency penalty: more switches = less safe
+        yellow_phases = sum(1 for i in self.intersections if i.is_yellow)
 
         return {
             "total_throughput": int(total_throughput),
@@ -480,7 +502,8 @@ class TrafficEnvironment:
             "total_emissions_kg": round(float(total_emissions), 4),
             "total_near_misses": int(total_near_misses),
             "total_stops": int(total_stops),
-            "safety_score": round(float(max(0, min(100, 100 - near_miss_rate * 2 - stop_rate * 0.35))), 2)
+            "safety_score": round(float(max(0, min(100, 100 - near_miss_rate * 3.5 - stop_rate * 0.5 - yellow_phases * 0.3))), 2),
+            "bus_delay": round(float(self.total_bus_delay), 2)
         }
 
     def get_grid_state(self):

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+import React, { useState, useEffect, useRef, useMemo } from "react"
 import { Play, Pause, RotateCcw, Brain, AlertTriangle, CloudRain, Ambulance, Info } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
 
@@ -149,11 +149,49 @@ export default function LiveSimulation({ data }) {
               <pattern id="gridP" width="40" height="40" patternUnits="userSpaceOnUse">
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
               </pattern>
+              {/* Animated vehicle flow on horizontal roads */}
+              {[0,1,2,3].map(i => {
+                const y = 110 + i * 155
+                return <React.Fragment key={"ah"+i}>
+                  <animateMotion id={"mh"+i} dur={(4 + i * 0.5) + "s"} repeatCount="indefinite" path={`M100,${y} L780,${y}`}/>
+                </React.Fragment>
+              })}
             </defs>
             <rect width="820" height="740" fill="url(#gridP)"/>
 
             {/* Sandstorm overlay */}
             {chaos.sand && <rect width="820" height="740" fill="rgba(245,158,11,0.06)" rx="10"/>}
+
+            {/* Animated vehicle dots on roads */}
+            {[0,1,2,3].map(row => {
+              const y = 110 + row * 155
+              // Show more dots on higher congestion rows
+              const rowInts = grid.slice(row * 4, row * 4 + 4)
+              const avgQ = rowInts.length > 0 ? rowInts.reduce((s,g) => s + g.queue_ns + g.queue_ew, 0) / 4 : 5
+              const numDots = Math.min(6, Math.max(2, Math.floor(avgQ / 4)))
+              return Array.from({ length: numDots }).map((_, di) => {
+                const offset = (di * 680 / numDots + step * 8) % 680 + 100
+                const laneY = y + (di % 2 === 0 ? -6 : 6)
+                return <circle key={"vh"+row+"-"+di} cx={offset} cy={laneY} r={2.5}
+                  fill={avgQ > 20 ? "#ef4444" : avgQ > 10 ? "#f59e0b" : "#22c55e"} opacity={0.7}>
+                  <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2s" begin={di*0.3+"s"} repeatCount="indefinite"/>
+                </circle>
+              })
+            })}
+            {[0,1,2,3].map(col => {
+              const x = 200 + col * 165
+              const colInts = [0,1,2,3].map(r => grid[r * 4 + col]).filter(Boolean)
+              const avgQ = colInts.length > 0 ? colInts.reduce((s,g) => s + g.queue_ns + g.queue_ew, 0) / 4 : 5
+              const numDots = Math.min(5, Math.max(2, Math.floor(avgQ / 5)))
+              return Array.from({ length: numDots }).map((_, di) => {
+                const offset = (di * 600 / numDots + step * 6) % 600 + 55
+                const laneX = x + (di % 2 === 0 ? -6 : 6)
+                return <circle key={"vv"+col+"-"+di} cx={laneX} cy={offset} r={2.5}
+                  fill={avgQ > 20 ? "#ef4444" : avgQ > 10 ? "#f59e0b" : "#22c55e"} opacity={0.7}>
+                  <animate attributeName="opacity" values="0.7;0.3;0.7" dur="2.5s" begin={di*0.4+"s"} repeatCount="indefinite"/>
+                </circle>
+              })
+            })}
 
             {/* Zone labels - left side with background pill */}
             {ZONES.map((z, i) => {

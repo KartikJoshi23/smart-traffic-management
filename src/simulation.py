@@ -94,6 +94,7 @@ class SimulationRunner:
             "avg_queues": [],
             "emissions": [],
             "safety_scores": [],
+            "bus_delays": [],
             "epsilons": []
         }
 
@@ -139,6 +140,7 @@ class SimulationRunner:
             history["avg_queues"].append(summary["avg_queue_length"])
             history["emissions"].append(summary["total_emissions_kg"])
             history["safety_scores"].append(summary["safety_score"])
+            history["bus_delays"].append(summary.get("bus_delay", 0))
 
             # Track epsilon
             agent_stats = controller.get_stats()
@@ -164,6 +166,7 @@ class SimulationRunner:
             "avg_queue": round(np.mean(history["avg_queues"][-window:]), 2),
             "avg_emissions": round(np.mean(history["emissions"][-window:]), 4),
             "avg_safety_score": round(np.mean(history["safety_scores"][-window:]), 2),
+            "avg_bus_delay": round(np.mean(history["bus_delays"][-window:]), 2),
             "total_episodes": num_episodes
         }
 
@@ -223,17 +226,11 @@ class SimulationRunner:
         for agent_type in self.AGENT_TYPES:
             metrics = scenario_results[agent_type]["final_metrics"]
 
-            # Calculate bus delay metric
-            if agent_type == "fixed_timer":
-                bus_delay = metrics["avg_wait_time"] * 1.2  # Fixed timer has no bus priority
-            else:
-                bus_delay = metrics["avg_wait_time"] * 0.8  # RL agents adapt better
-
             policy_results[self.AGENT_LABELS[agent_type]] = {
                 "throughput": metrics["avg_throughput"],
                 "safety_score": metrics["avg_safety_score"],
                 "emissions": metrics["avg_emissions"],
-                "bus_delay": bus_delay
+                "bus_delay": metrics.get("avg_bus_delay", metrics["avg_wait_time"] * 0.9)
             }
 
         # Also add bus-priority variants for RL agents
@@ -247,7 +244,7 @@ class SimulationRunner:
                         "throughput": bp_metrics["avg_throughput"],
                         "safety_score": bp_metrics["avg_safety_score"],
                         "emissions": bp_metrics["avg_emissions"],
-                        "bus_delay": bp_metrics["avg_wait_time"] * 0.6
+                        "bus_delay": bp_metrics.get("avg_bus_delay", bp_metrics["avg_wait_time"] * 0.7)
                     }
 
         return evaluate_policies(policy_results)
@@ -321,6 +318,7 @@ class SimulationRunner:
 
             # Record frame
             grid_state = env.get_grid_state()
+            step_emissions = round(sum(inter.total_emissions for inter in env.intersections), 4)
             frame = {
                 "step": step,
                 "grid": grid_state,
@@ -328,6 +326,7 @@ class SimulationRunner:
                     "avg_queue": info["avg_queue_length"],
                     "avg_wait": info["avg_wait_time"],
                     "throughput": info["total_throughput"],
+                    "emissions": float(step_emissions),
                     "hour": info["hour"]
                 },
                 "actions": [int(a) for a in actions],

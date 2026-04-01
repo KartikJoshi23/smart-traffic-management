@@ -5,36 +5,39 @@
       "fixed_timer": {
         "label": "Fixed Timer",
         "metrics": {
-          "avg_reward": -2305.32,
-          "avg_wait_time": 2421.02,
-          "avg_throughput": 5395.66,
-          "avg_queue": 9.75,
-          "avg_emissions": 77.4726,
-          "avg_safety_score": 81.98,
+          "avg_reward": -2524.16,
+          "avg_wait_time": 2486.01,
+          "avg_throughput": 5374.98,
+          "avg_queue": 10.34,
+          "avg_emissions": 79.5523,
+          "avg_safety_score": 69.25,
+          "avg_bus_delay": 4994.84,
           "total_episodes": 300
         }
       },
       "q_learning": {
         "label": "Q-Learning",
         "metrics": {
-          "avg_reward": -2598.74,
-          "avg_wait_time": 2524.1,
-          "avg_throughput": 5286.24,
-          "avg_queue": 10.67,
-          "avg_emissions": 80.7711,
-          "avg_safety_score": 81.99,
+          "avg_reward": -2284.22,
+          "avg_wait_time": 2354.64,
+          "avg_throughput": 5334.94,
+          "avg_queue": 9.7,
+          "avg_emissions": 75.3486,
+          "avg_safety_score": 68.83,
+          "avg_bus_delay": 4586.18,
           "total_episodes": 300
         }
       },
       "sarsa": {
         "label": "SARSA",
         "metrics": {
-          "avg_reward": -2702.28,
-          "avg_wait_time": 2605.97,
-          "avg_throughput": 5380.42,
-          "avg_queue": 11.11,
-          "avg_emissions": 83.3912,
-          "avg_safety_score": 82.0,
+          "avg_reward": -2191.35,
+          "avg_wait_time": 2294.13,
+          "avg_throughput": 5280.56,
+          "avg_queue": 9.24,
+          "avg_emissions": 73.412,
+          "avg_safety_score": 68.94,
+          "avg_bus_delay": 4409.84,
           "total_episodes": 300
         }
       }
@@ -46,36 +49,39 @@
       "fixed_timer": {
         "label": "Fixed Timer",
         "metrics": {
-          "avg_reward": -24342.29,
-          "avg_wait_time": 26374.13,
-          "avg_throughput": 11191.68,
-          "avg_queue": 156.33,
-          "avg_emissions": 843.972,
-          "avg_safety_score": 78.4,
+          "avg_reward": -24796.28,
+          "avg_wait_time": 25681.58,
+          "avg_throughput": 11552.68,
+          "avg_queue": 149.83,
+          "avg_emissions": 821.8105,
+          "avg_safety_score": 44.36,
+          "avg_bus_delay": 50165.42,
           "total_episodes": 300
         }
       },
       "q_learning": {
         "label": "Q-Learning",
         "metrics": {
-          "avg_reward": -23451.91,
-          "avg_wait_time": 22001.42,
-          "avg_throughput": 11926.72,
-          "avg_queue": 120.95,
-          "avg_emissions": 704.0456,
-          "avg_safety_score": 79.56,
+          "avg_reward": -22937.2,
+          "avg_wait_time": 22179.63,
+          "avg_throughput": 12128.36,
+          "avg_queue": 122.51,
+          "avg_emissions": 709.7482,
+          "avg_safety_score": 47.18,
+          "avg_bus_delay": 43053.3,
           "total_episodes": 300
         }
       },
       "sarsa": {
         "label": "SARSA",
         "metrics": {
-          "avg_reward": -23929.13,
-          "avg_wait_time": 22108.7,
-          "avg_throughput": 11982.56,
-          "avg_queue": 121.17,
-          "avg_emissions": 707.4784,
-          "avg_safety_score": 79.66,
+          "avg_reward": -22925.69,
+          "avg_wait_time": 21935.8,
+          "avg_throughput": 12171.14,
+          "avg_queue": 120.14,
+          "avg_emissions": 701.9456,
+          "avg_safety_score": 47.5,
+          "avg_bus_delay": 42703.56,
           "total_episodes": 300
         }
       }
@@ -87,36 +93,39 @@
       "fixed_timer": {
         "label": "Fixed Timer",
         "metrics": {
-          "avg_reward": -7011.46,
-          "avg_wait_time": 7426.8,
-          "avg_throughput": 9058.2,
-          "avg_queue": 31.74,
-          "avg_emissions": 237.6577,
-          "avg_safety_score": 81.86,
+          "avg_reward": -8249.95,
+          "avg_wait_time": 8068.15,
+          "avg_throughput": 8946.98,
+          "avg_queue": 37.06,
+          "avg_emissions": 258.1807,
+          "avg_safety_score": 57.72,
+          "avg_bus_delay": 13828.28,
           "total_episodes": 300
         }
       },
       "q_learning": {
         "label": "Q-Learning",
         "metrics": {
-          "avg_reward": -7200.39,
-          "avg_wait_time": 7238.86,
-          "avg_throughput": 9071.98,
-          "avg_queue": 32.38,
-          "avg_emissions": 231.6437,
-          "avg_safety_score": 81.81,
+          "avg_reward": -7178.83,
+          "avg_wait_time": 7066.88,
+          "avg_throughput": 9063.4,
+          "avg_queue": 31.41,
+          "avg_emissions": 226.1401,
+          "avg_safety_score": 59.97,
+          "avg_bus_delay": 12138.44,
           "total_episodes": 300
         }
       },
       "sarsa": {
         "label": "SARSA",
         "metrics": {
-          "avg_reward": -6773.42,
-          "avg_wait_time": 6830.69,
-          "avg_throughput": 8983.44,
-          "avg_queue": 29.98,
-          "avg_emissions": 218.5822,
-          "avg_safety_score": 81.92,
+          "avg_reward": -6247.6,
+          "avg_wait_time": 6312.01,
+          "avg_throughput": 8917.32,
+          "avg_queue": 26.37,
+          "avg_emissions": 201.9844,
+          "avg_safety_score": 60.22,
+          "avg_bus_delay": 11089.34,
           "total_episodes": 300
         }
       }
@@ -128,36 +137,39 @@
       "fixed_timer": {
         "label": "Fixed Timer",
         "metrics": {
-          "avg_reward": -6657.45,
-          "avg_wait_time": 7207.14,
-          "avg_throughput": 7668.18,
-          "avg_queue": 35.2,
-          "avg_emissions": 230.6284,
-          "avg_safety_score": 80.86,
+          "avg_reward": -7118.36,
+          "avg_wait_time": 7357.94,
+          "avg_throughput": 7776.36,
+          "avg_queue": 35.6,
+          "avg_emissions": 235.4541,
+          "avg_safety_score": 62.53,
+          "avg_bus_delay": 13239.86,
           "total_episodes": 300
         }
       },
       "q_learning": {
         "label": "Q-Learning",
         "metrics": {
-          "avg_reward": -7105.87,
-          "avg_wait_time": 7078.57,
-          "avg_throughput": 7792.62,
-          "avg_queue": 34.25,
-          "avg_emissions": 226.5142,
-          "avg_safety_score": 80.97,
+          "avg_reward": -6780.8,
+          "avg_wait_time": 6892.2,
+          "avg_throughput": 7804.4,
+          "avg_queue": 33.2,
+          "avg_emissions": 220.5505,
+          "avg_safety_score": 63.66,
+          "avg_bus_delay": 11869.64,
           "total_episodes": 300
         }
       },
       "sarsa": {
         "label": "SARSA",
         "metrics": {
-          "avg_reward": -7039.49,
-          "avg_wait_time": 6906.23,
-          "avg_throughput": 7730.04,
-          "avg_queue": 33.14,
-          "avg_emissions": 220.9992,
-          "avg_safety_score": 81.26,
+          "avg_reward": -6607.56,
+          "avg_wait_time": 6694.53,
+          "avg_throughput": 7797.6,
+          "avg_queue": 32.72,
+          "avg_emissions": 214.2248,
+          "avg_safety_score": 63.86,
+          "avg_bus_delay": 11408.94,
           "total_episodes": 300
         }
       }
@@ -169,36 +181,39 @@
       "fixed_timer": {
         "label": "Fixed Timer",
         "metrics": {
-          "avg_reward": -3427.54,
-          "avg_wait_time": 3369.02,
-          "avg_throughput": 6627.96,
-          "avg_queue": 13.43,
-          "avg_emissions": 107.8086,
-          "avg_safety_score": 82.08,
+          "avg_reward": -3422.32,
+          "avg_wait_time": 3350.44,
+          "avg_throughput": 6619.4,
+          "avg_queue": 13.7,
+          "avg_emissions": 107.2141,
+          "avg_safety_score": 67.43,
+          "avg_bus_delay": 4500.76,
           "total_episodes": 300
         }
       },
       "q_learning": {
         "label": "Q-Learning",
         "metrics": {
-          "avg_reward": -3238.04,
-          "avg_wait_time": 3310.2,
-          "avg_throughput": 6740.2,
-          "avg_queue": 13.3,
-          "avg_emissions": 105.9263,
-          "avg_safety_score": 82.26,
+          "avg_reward": -3239.99,
+          "avg_wait_time": 3304.72,
+          "avg_throughput": 6742.52,
+          "avg_queue": 12.93,
+          "avg_emissions": 105.751,
+          "avg_safety_score": 67.53,
+          "avg_bus_delay": 4212.0,
           "total_episodes": 300
         }
       },
       "sarsa": {
         "label": "SARSA",
         "metrics": {
-          "avg_reward": -3185.17,
-          "avg_wait_time": 3310.53,
-          "avg_throughput": 6814.28,
-          "avg_queue": 13.39,
-          "avg_emissions": 105.937,
-          "avg_safety_score": 82.11,
+          "avg_reward": -3043.37,
+          "avg_wait_time": 3141.88,
+          "avg_throughput": 6602.26,
+          "avg_queue": 13.0,
+          "avg_emissions": 100.5401,
+          "avg_safety_score": 68.08,
+          "avg_bus_delay": 4019.9,
           "total_episodes": 300
         }
       }

@@ -33,9 +33,18 @@ export default function MCDMAnalysis({ data }) {
 
   const radarData = useMemo(() => {
     if (!normMatrix.length || !criteria.length) return []
+    // Use raw values from normMatrix, but rescale so the BEST alternative = 100
+    // and others are proportional. This avoids exaggerating tiny differences.
     return criteria.map((c, ci) => {
+      const vals = alts.map((_, ai) => normMatrix[ai]?.[ci] ?? 0)
+      const maxVal = Math.max(...vals, 0.001)
       const pt = { criteria: CRIT_LABELS[ci] || c }
-      alts.forEach((alt, ai) => { pt[alt] = normMatrix[ai]?.[ci] != null ? +(normMatrix[ai][ci] * 100).toFixed(1) : 0 })
+      alts.forEach((alt, ai) => {
+        // Scale relative to best performer (0-100) with a floor of 20
+        // so the chart doesn't collapse to the center
+        const relScore = (vals[ai] / maxVal) * 80 + 20
+        pt[alt] = +relScore.toFixed(1)
+      })
       return pt
     })
   }, [normMatrix, criteria, alts])
@@ -204,28 +213,30 @@ export default function MCDMAnalysis({ data }) {
           <div style={{ overflowX: "auto" }}>
             <table className="data-table">
               <thead>
-                <tr><th>Criterion</th><th>Weight {String.fromCharCode(916)}</th><th>Modified</th><th>WSM #1</th><th>TOPSIS #1</th><th>Stability</th></tr>
+                <tr><th>Criterion</th><th>Base Weight</th><th>Tested Range</th><th>WSM Stable</th><th>TOPSIS Stable</th><th>Verdict</th></tr>
               </thead>
               <tbody>
-                {Object.values(sensitivity).map((entry) => {
+                {Object.values(sensitivity).map((entry, ei) => {
                   const crit = CRIT_LABELS[criteria.indexOf(entry.criterion)] || entry.criterion
-                  return entry.variations?.map((v, vi) => {
-                    const w1 = alts[v.wsm_ranking?.[0]] || "N/A"
-                    const t1 = alts[v.topsis_ranking?.[0]] || "N/A"
-                    const ok = w1 === t1
-                    return (
-                      <tr key={entry.criterion + vi}>
-                        {vi === 0 && <td rowSpan={entry.variations.length} style={{ fontWeight: 700, color: "var(--text-white)", verticalAlign: "middle" }}>{crit}</td>}
-                        <td className="mono" style={{ color: v.weight_delta > 0 ? "#4ade80" : v.weight_delta < 0 ? "#f87171" : "var(--text-secondary)" }}>
-                          {v.weight_delta > 0 ? "+" : ""}{(v.weight_delta * 100).toFixed(1)}%
-                        </td>
-                        <td className="mono">{(v.modified_weight * 100).toFixed(1)}%</td>
-                        <td style={{ color: "#3b82f6", fontWeight: 700 }}>{w1}</td>
-                        <td style={{ color: "#a855f7", fontWeight: 700 }}>{t1}</td>
-                        <td><span className={ok ? "badge badge-green" : "badge badge-amber"}>{ok ? "Consistent" : "Divergent"}</span></td>
-                      </tr>
-                    )
-                  })
+                  const vars = entry.variations || []
+                  const baseWeight = weights[criteria.indexOf(entry.criterion)] || 0
+                  const minW = Math.min(...vars.map(v => v.modified_weight))
+                  const maxW = Math.max(...vars.map(v => v.modified_weight))
+                  const wsmWinners = new Set(vars.map(v => alts[v.wsm_ranking?.[0]] || "N/A"))
+                  const topsisWinners = new Set(vars.map(v => alts[v.topsis_ranking?.[0]] || "N/A"))
+                  const wsmStable = wsmWinners.size === 1
+                  const topsisStable = topsisWinners.size === 1
+                  const bothStable = wsmStable && topsisStable
+                  return (
+                    <tr key={ei}>
+                      <td style={{ fontWeight: 700, color: CRIT_COLORS[ei] || "var(--text-white)" }}>{crit}</td>
+                      <td className="mono">{(baseWeight * 100).toFixed(0)}%</td>
+                      <td className="mono" style={{ color: "var(--text-secondary)" }}>{(minW*100).toFixed(0)}% - {(maxW*100).toFixed(0)}%</td>
+                      <td><span className={wsmStable ? "badge badge-green" : "badge badge-amber"}>{wsmStable ? [...wsmWinners][0] : [...wsmWinners].join(" / ")}</span></td>
+                      <td><span className={topsisStable ? "badge badge-green" : "badge badge-amber"}>{topsisStable ? [...topsisWinners][0] : [...topsisWinners].join(" / ")}</span></td>
+                      <td><span className={bothStable ? "badge badge-green" : "badge badge-red"}>{bothStable ? "Robust" : "Sensitive"}</span></td>
+                    </tr>
+                  )
                 })}
               </tbody>
             </table>

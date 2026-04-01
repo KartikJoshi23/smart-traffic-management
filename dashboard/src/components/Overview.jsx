@@ -56,16 +56,27 @@ export default function Overview({ data }) {
       badge: (bestSafe.ag || "").replace("_", " "), pos: true, color: "#a855f7", glow: "glow-violet" },
   ]
 
-  // Economic calculations
-  const waitRedMin = (ftW - bestRLW) * 0.5 / 16
-  const vehHr = 750
-  const savPerIntHr = waitRedMin * vehHr * 0.8125 * 1.2
-  const annualVoT = savPerIntHr * 700 * 4 * 300
-  const fuelPerHr = (waitRedMin / 60) * vehHr * 0.6
-  const annualFuelL = fuelPerHr * 700 * 4 * 300
-  const annualFuelAED = annualFuelL * 3.23
-  const annualCO2 = annualFuelL * 2.31 / 1000
-  const annualCarbonAED = annualCO2 * 75
+  // Economic calculations — grounded in realistic Dubai data
+  // Wait reduction: (Fixed - RL) steps over episode, each step = 30s sim time
+  // Per intersection: avg wait saved per vehicle (seconds)
+  const waitSavedPerVehicle = ((ftW - bestRLW) / 16) * 0.5  // seconds per vehicle at each intersection
+  // Dubai: ~1,800 vehicles/hour through major intersection, 4 peak hours/day
+  const vehPerIntersectionDay = 1800 * 4
+  // Value of Time: Dubai avg ~AED 50/hour = AED 0.014/second (per RTA 2024 VoT study)
+  const dailyVoTPerInt = waitSavedPerVehicle * vehPerIntersectionDay * 0.014
+  // Fuel: idle consumption ~0.6L/hour, saved per vehicle = waitSaved(sec)/3600 * 0.6L
+  const fuelSavedPerVehicle = (waitSavedPerVehicle / 3600) * 0.6
+  const dailyFuelLitersPerInt = fuelSavedPerVehicle * vehPerIntersectionDay
+  const dailyFuelAEDPerInt = dailyFuelLitersPerInt * 3.23  // AED/liter
+  // CO2: 2.31 kg per liter petrol
+  const dailyCO2PerInt = dailyFuelLitersPerInt * 2.31  // kg
+  // Scale from 16 to Dubai's ~180 signalized intersections on major arteries
+  const numTargetIntersections = 180
+  const annualVoT = dailyVoTPerInt * numTargetIntersections * 300  // 300 working days
+  const annualFuelAED = dailyFuelAEDPerInt * numTargetIntersections * 300
+  const annualFuelL = dailyFuelLitersPerInt * numTargetIntersections * 300
+  const annualCO2 = dailyCO2PerInt * numTargetIntersections * 300 / 1000  // tonnes
+  const annualCarbonAED = annualCO2 * 75  // Dubai Carbon Exchange ~AED 75/tonne
   const totalAED = annualVoT + annualFuelAED + annualCarbonAED
 
   const barData = Object.entries(rush).map(([ag, ad]) => ({
@@ -120,15 +131,15 @@ export default function Overview({ data }) {
           </div>
           <span>Economic Impact Analysis</span>
           <span style={{ fontSize: 10, color: "var(--text-faint)", fontWeight: 400, marginLeft: "auto" }}>
-            Projected city-wide annual savings (700 intersections)
+            Projected annual savings across 180 major signalized intersections
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
           {[
-            { icon: DollarSign, label: "Total Annual Savings", val: "AED " + (totalAED/1e6).toFixed(1) + "M", color: "#06b6d4", sub: "Combined economic value" },
-            { icon: Clock, label: "Value of Time Saved", val: "AED " + (annualVoT/1e6).toFixed(1) + "M", color: "#3b82f6", sub: "Based on Dubai avg salary" },
-            { icon: Fuel, label: "Fuel Cost Reduction", val: "AED " + (annualFuelAED/1e6).toFixed(1) + "M", color: "#f59e0b", sub: (annualFuelL/1e6).toFixed(2) + "M liters saved" },
-            { icon: Leaf, label: "Carbon Credit Revenue", val: "AED " + (annualCarbonAED/1000).toFixed(0) + "K", color: "#22c55e", sub: annualCO2.toFixed(0) + " tons CO\u2082 reduced" },
+            { icon: DollarSign, label: "Total Annual Savings", val: totalAED >= 1e6 ? "AED " + (totalAED/1e6).toFixed(1) + "M" : "AED " + (totalAED/1e3).toFixed(0) + "K", color: "#06b6d4", sub: "Per-intersection: AED " + Math.round(dailyVoTPerInt + dailyFuelAEDPerInt) + "/day" },
+            { icon: Clock, label: "Value of Time Saved", val: annualVoT >= 1e6 ? "AED " + (annualVoT/1e6).toFixed(1) + "M" : "AED " + (annualVoT/1e3).toFixed(0) + "K", color: "#3b82f6", sub: waitSavedPerVehicle.toFixed(1) + "s saved per vehicle" },
+            { icon: Fuel, label: "Fuel Cost Reduction", val: annualFuelAED >= 1e6 ? "AED " + (annualFuelAED/1e6).toFixed(1) + "M" : "AED " + (annualFuelAED/1e3).toFixed(0) + "K", color: "#f59e0b", sub: Math.round(annualFuelL).toLocaleString() + " liters saved" },
+            { icon: Leaf, label: "Carbon Credit Revenue", val: annualCarbonAED >= 1e3 ? "AED " + (annualCarbonAED/1e3).toFixed(0) + "K" : "AED " + Math.round(annualCarbonAED), color: "#22c55e", sub: annualCO2.toFixed(1) + " tonnes CO\u2082 reduced" },
           ].map((e, i) => (
             <div key={i} className="metric-box">
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>

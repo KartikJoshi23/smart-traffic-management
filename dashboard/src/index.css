@@ -1,15 +1,15 @@
 @import 'tailwindcss';
 
 :root {
-  --bg-page: #09090b;
-  --bg-card: #18181b;
-  --bg-elevated: #27272a;
-  --bg-input: #1f1f23;
-  --bg-hover: #2c2c30;
+  --bg-page: #0a0a0c;
+  --bg-card: #141418;
+  --bg-elevated: #1e1e24;
+  --bg-input: #1a1a20;
+  --bg-hover: #28282e;
 
-  --border-dim: rgba(255,255,255,0.06);
-  --border-base: rgba(255,255,255,0.10);
-  --border-bright: rgba(255,255,255,0.18);
+  --border-dim: rgba(255,255,255,0.08);
+  --border-base: rgba(255,255,255,0.12);
+  --border-bright: rgba(255,255,255,0.22);
 
   --text-white: #fafafa;
   --text-primary: #e4e4e7;
@@ -45,14 +45,14 @@ body {
 /* Cards with section-colored left border */
 .card {
   background: var(--bg-card);
-  border: 1px solid var(--border-dim);
+  border: 1px solid var(--border-base);
   border-radius: 14px;
   padding: 24px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .card:hover {
-  border-color: var(--border-base);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border-color: var(--border-bright);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
 
 /* Section-colored cards */
@@ -67,7 +67,7 @@ body {
 /* KPI cards with gradient top border */
 .kpi-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-dim);
+  border: 1px solid var(--border-base);
   border-radius: 14px;
   padding: 22px;
   position: relative;
