@@ -32,7 +32,7 @@ class SimulationRunner:
     """
 
     SCENARIOS = ["normal", "rush_hour", "incident", "event", "bus_priority"]
-    AGENT_TYPES = ["fixed_timer", "q_learning", "sarsa"]
+    AGENT_TYPES = ["fixed_timer", "q_learning", "sarsa", "coordinated_q_learning", "coordinated_sarsa"]
 
     SCENARIO_LABELS = {
         "normal": "Normal Traffic",
@@ -45,7 +45,9 @@ class SimulationRunner:
     AGENT_LABELS = {
         "fixed_timer": "Fixed Timer",
         "q_learning": "Q-Learning",
-        "sarsa": "SARSA"
+        "sarsa": "SARSA",
+        "coordinated_q_learning": "Coord. Q-Learning",
+        "coordinated_sarsa": "Coord. SARSA"
     }
 
     def __init__(self, num_episodes=300, steps_per_episode=200):
@@ -71,17 +73,18 @@ class SimulationRunner:
 
         # Agent configuration
         agent_kwargs = {}
-        if agent_type == "q_learning":
+        base_type = agent_type.replace("coordinated_", "")
+        if base_type == "q_learning":
             agent_kwargs = {
                 "alpha": 0.15, "gamma": 0.95,
                 "epsilon": 1.0, "epsilon_decay": 0.993, "epsilon_min": 0.01
             }
-        elif agent_type == "sarsa":
+        elif base_type == "sarsa":
             agent_kwargs = {
                 "alpha": 0.12, "gamma": 0.95,
                 "epsilon": 1.0, "epsilon_decay": 0.993, "epsilon_min": 0.01
             }
-        elif agent_type == "fixed_timer":
+        elif base_type == "fixed_timer":
             agent_kwargs = {"switch_interval": 15}
 
         controller = MultiAgentController(agent_type=agent_type, **agent_kwargs)
@@ -106,7 +109,7 @@ class SimulationRunner:
             episode_total_reward = 0
 
             # Choose initial actions (needed for SARSA)
-            actions = controller.choose_actions(states)
+            actions = controller.choose_actions(states, env.intersections)
 
             for step in range(self.steps_per_episode):
                 # Execute actions
@@ -114,10 +117,10 @@ class SimulationRunner:
                 episode_total_reward += sum(rewards)
 
                 # Choose next actions
-                next_actions = controller.choose_actions(next_states)
+                next_actions = controller.choose_actions(next_states, env.intersections)
 
                 # Update agents
-                if agent_type == "sarsa":
+                if base_type == "sarsa":
                     controller.update_all(states, actions, rewards,
                                           next_states, next_actions)
                 else:
@@ -236,7 +239,7 @@ class SimulationRunner:
         # Also add bus-priority variants for RL agents
         if "bus_priority" in self.results:
             bp_results = self.results["bus_priority"]
-            for agent_type in ["q_learning", "sarsa"]:
+            for agent_type in ["q_learning", "sarsa", "coordinated_q_learning", "coordinated_sarsa"]:
                 if agent_type in bp_results:
                     bp_metrics = bp_results[agent_type]["final_metrics"]
                     label = f"{self.AGENT_LABELS[agent_type]} + Bus Priority"
@@ -269,18 +272,19 @@ class SimulationRunner:
                     agent.epsilon = 0.02  # Tiny exploration for variety
             print(f"    Using trained {agent_type} controller for live sim")
         else:
+            base_type = agent_type.replace("coordinated_", "")
             agent_kwargs = {}
-            if agent_type == "q_learning":
+            if base_type == "q_learning":
                 agent_kwargs = {
                     "alpha": 0.05, "gamma": 0.95,
                     "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1
                 }
-            elif agent_type == "sarsa":
+            elif base_type == "sarsa":
                 agent_kwargs = {
                     "alpha": 0.05, "gamma": 0.95,
                     "epsilon": 0.1, "epsilon_decay": 1.0, "epsilon_min": 0.1
                 }
-            elif agent_type == "fixed_timer":
+            elif base_type == "fixed_timer":
                 agent_kwargs = {"switch_interval": 15}
             controller = MultiAgentController(agent_type=agent_type, **agent_kwargs)
             print(f"    No trained controller for {agent_type}/{scenario}, using fresh")
@@ -289,7 +293,7 @@ class SimulationRunner:
         frames = []
 
         for step in range(num_steps):
-            actions = controller.choose_actions(states)
+            actions = controller.choose_actions(states, env.intersections)
             next_states, rewards, done, info = env.step(actions)
 
             # Extract Q-values for XAI (only for RL agents)
@@ -331,7 +335,8 @@ class SimulationRunner:
                 },
                 "actions": [int(a) for a in actions],
                 "rewards": [round(float(r), 2) for r in rewards],
-                "q_values": q_values_data
+                "q_values": q_values_data,
+                "overrides": controller.last_overrides if hasattr(controller, 'last_overrides') else []
             }
             frames.append(frame)
 
@@ -425,6 +430,6 @@ class SimulationRunner:
         print(f"Results exported to: {output_dir}")
         print(f"  - training_results.json")
         print(f"  - mcdm_results.json")
-        print(f"  - live_simulation_*.json (3 files)")
+        print(f"  - live_simulation_*.json ({len(self.AGENT_TYPES)} files)")
         print(f"  - scenario_comparison.json")
         print(f"  - intersection_meta.json")

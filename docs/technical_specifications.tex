@@ -65,7 +65,7 @@ Urban traffic congestion in Dubai costs an estimated AED~4.6 billion annually in
 
 \subsection{Agent Roles and Architecture}
 
-Each of the 16 intersections operates as a \textbf{decentralized RL agent} with a private Q-table. Agents do not communicate directly but interact through shared traffic dynamics --- vehicles departing one intersection arrive at adjacent ones. Three control strategies are evaluated:
+Each of the 16 intersections operates as a \textbf{decentralized RL agent} with a private Q-table. Agents do not communicate directly but interact through shared traffic dynamics --- vehicles departing one intersection arrive at adjacent ones. Three base control strategies are evaluated, plus two \textbf{coordinated} variants that add an explicit network-level coordination layer:
 
 \begin{table}[H]
 \centering
@@ -77,6 +77,8 @@ Each of the 16 intersections operates as a \textbf{decentralized RL agent} with 
     Q-Learning & Tabular TD (off-policy) & Aggressive; $\max Q(s',a')$ & Fast convergence; may overestimate Q-values \\
     SARSA & Tabular TD (on-policy) & Conservative; actual $Q(s',a')$ & Safer policies; accounts for exploration noise \\
     Fixed Timer & Deterministic cycle & No learning (baseline) & Switches phase every 15 steps; no state awareness \\
+    Coord.\ Q-Learning & Q-Learning + Coordination & Hybrid (agent + network) & Green wave, conflict resolution, corridor balancing \\
+    Coord.\ SARSA & SARSA + Coordination & Hybrid (agent + network) & Conservative policy with network-level oversight \\
     \bottomrule
 \end{tabularx}
 \end{table}
@@ -95,7 +97,7 @@ The system targets five measurable performance criteria, aligned with Dubai RTA 
 
 \subsection{Scope and Scenario Coverage}
 
-Five traffic scenarios are implemented: \textbf{Normal} ($1.0\times$), \textbf{Rush Hour} ($2.5\times$ traffic multiplier), \textbf{Incident} (lane closure at DIFC with $1.4\times$ rerouting), \textbf{Event} ($2.0\times$ local boost near Dubai Mall/Marina), and \textbf{Bus Priority} ($1.2\times$ with 6 bus route preemption). Each runs for 300 training episodes $\times$ 200 steps = \textbf{15 experiments} total (3 agents $\times$ 5 scenarios). The 4$\times$4 grid uses real Dubai intersection names (Al Rigga, DIFC, Dubai Mall, Marina, etc.) grouped into four zones: Deira, Downtown, Jumeirah, and South Dubai.
+Five traffic scenarios are implemented: \textbf{Normal} ($1.0\times$), \textbf{Rush Hour} ($2.5\times$ traffic multiplier), \textbf{Incident} (lane closure at DIFC with $1.4\times$ rerouting), \textbf{Event} ($2.0\times$ local boost near Dubai Mall/Marina), and \textbf{Bus Priority} ($1.2\times$ with 6 bus route preemption). Each runs for 300 training episodes $\times$ 200 steps = \textbf{25 experiments} total (5 agents $\times$ 5 scenarios). The 4$\times$4 grid uses real Dubai intersection names (Al Rigga, DIFC, Dubai Mall, Marina, etc.) grouped into four zones: Deira, Downtown, Jumeirah, and South Dubai.
 
 % ======== 2. ALGORITHM ========
 \section{Algorithm}
@@ -271,10 +273,10 @@ This system uses \textbf{synthetically generated data} calibrated to Dubai traff
 \subsection{Key Findings}
 
 \begin{enumerate}[nosep, leftmargin=*]
-    \item \textbf{RL excels in dynamic scenarios}: SARSA reduces wait time by \textbf{14.6\%} and emissions by \textbf{14.6\%} in Rush Hour vs.\ Fixed Timer. Q-Learning achieves \textbf{+5.0\%} throughput improvement.
-    \item \textbf{Fixed Timer adequate for predictable traffic}: In Normal conditions, all three agents perform similarly (wait time within 8\%). This is expected and honest --- predictable traffic needs no adaptation.
-    \item \textbf{SARSA more conservative}: Consistently lower wait times than Q-Learning across all scenarios, with marginally higher safety scores, consistent with on-policy learning [3].
-    \item \textbf{Incident response}: SARSA achieves \textbf{21.8\%} wait reduction and \textbf{21.8\%} emission reduction during lane-closure incidents --- the strongest RL advantage.
+    \item \textbf{RL excels in dynamic scenarios}: Q-Learning reduces wait time by \textbf{14.3\%} and emissions by \textbf{14.3\%} in Rush Hour vs.\ Fixed Timer. SARSA achieves \textbf{+5.9\%} throughput improvement.
+    \item \textbf{Coordinated agents achieve lowest Rush Hour wait}: Coord.\ Q-Learning reduces wait time by \textbf{20.1\%} (25,783 $\to$ 20,597) with the highest safety score (48.0). Coordination overhead is counterproductive in low-congestion scenarios.
+    \item \textbf{SARSA more conservative}: Consistently lower wait times than Q-Learning in Incident and Event scenarios, with comparable safety scores, consistent with on-policy learning [3].
+    \item \textbf{Incident response}: SARSA achieves \textbf{15.8\%} wait reduction and \textbf{15.8\%} emission reduction during lane-closure incidents --- the strongest standalone RL advantage.
 \end{enumerate}
 
 \subsection{Performance Summary (Mean of Last 50 Episodes)}
@@ -286,25 +288,35 @@ This system uses \textbf{synthetically generated data} calibrated to Dubai traff
     \toprule
     \textbf{Scenario} & \textbf{Agent} & \textbf{Avg Wait} & \textbf{Throughput} & \textbf{Emissions} & \textbf{Safety} \\
     \midrule
-    \multirow{3}{*}{Normal} & Fixed Timer & 2,486 & 5,375 & 79.6 & 69.3 \\
-    & Q-Learning & 2,355 ($-$5.3\%) & 5,335 & 75.3 & 68.8 \\
-    & SARSA & 2,294 ($-$7.7\%) & 5,281 & 73.4 & 68.9 \\
+    \multirow{5}{*}{Normal} & Fixed Timer & 2,465 & 5,317 & 78.9 & 68.7 \\
+    & Q-Learning & 2,390 ($-$3.0\%) & 5,340 & 76.5 & 68.7 \\
+    & SARSA & 2,322 ($-$5.8\%) & 5,330 & 74.3 & 69.0 \\
+    & Coord.\ Q-Learning & 2,631 (+6.7\%) & 5,362 & 84.2 & 69.3 \\
+    & Coord.\ SARSA & 2,604 (+5.6\%) & 5,361 & 83.3 & 69.3 \\
     \midrule
-    \multirow{3}{*}{Rush Hour} & Fixed Timer & 25,682 & 11,553 & 821.8 & 44.4 \\
-    & Q-Learning & 22,180 ($-$13.6\%) & 12,128 (+5.0\%) & 709.7 & 47.2 \\
-    & \textbf{SARSA} & \textbf{21,936 ($-$14.6\%)} & \textbf{12,171 (+5.4\%)} & \textbf{702.0} & \textbf{47.5} \\
+    \multirow{5}{*}{Rush Hour} & Fixed Timer & 25,783 & 11,514 & 825.1 & 43.8 \\
+    & Q-Learning & 22,106 ($-$14.3\%) & 12,070 (+4.8\%) & 707.4 & 47.5 \\
+    & SARSA & 22,723 ($-$11.9\%) & 12,187 (+5.9\%) & 727.1 & 46.7 \\
+    & \textbf{Coord.\ Q-Learning} & \textbf{20,597 ($-$20.1\%)} & 11,644 & \textbf{659.1} & 48.0 \\
+    & Coord.\ SARSA & 20,663 ($-$19.9\%) & 11,837 & 661.2 & \textbf{48.7} \\
     \midrule
-    \multirow{3}{*}{Incident} & Fixed Timer & 8,068 & 8,947 & 258.2 & 57.7 \\
-    & Q-Learning & 7,067 ($-$12.4\%) & 9,063 & 226.1 & 60.0 \\
-    & \textbf{SARSA} & \textbf{6,312 ($-$21.8\%)} & 8,917 & \textbf{202.0} & \textbf{60.2} \\
+    \multirow{5}{*}{Incident} & Fixed Timer & 7,696 & 8,912 & 246.3 & 58.2 \\
+    & Q-Learning & 6,754 ($-$12.2\%) & 8,980 & 216.1 & 59.9 \\
+    & \textbf{SARSA} & \textbf{6,480 ($-$15.8\%)} & \textbf{9,001} & \textbf{207.4} & 59.7 \\
+    & Coord.\ Q-Learning & 8,807 (+14.4\%) & 8,874 & 281.8 & 57.1 \\
+    & Coord.\ SARSA & 9,038 (+17.4\%) & 8,665 & 289.2 & 57.0 \\
     \midrule
-    \multirow{3}{*}{Event} & Fixed Timer & 7,358 & 7,776 & 235.5 & 62.5 \\
-    & Q-Learning & 6,892 ($-$6.3\%) & 7,804 & 220.6 & 63.7 \\
-    & SARSA & 6,695 ($-$9.0\%) & 7,798 & 214.2 & 63.9 \\
+    \multirow{5}{*}{Event} & Fixed Timer & 7,248 & 7,623 & 231.9 & 62.8 \\
+    & Q-Learning & 6,559 ($-$9.5\%) & 7,711 & 209.9 & 64.2 \\
+    & SARSA & 6,801 ($-$6.2\%) & 7,808 & 217.6 & 63.7 \\
+    & Coord.\ Q-Learning & 7,727 (+6.6\%) & 7,829 & 247.3 & 61.8 \\
+    & Coord.\ SARSA & 7,680 (+6.0\%) & 7,831 & 245.8 & 62.0 \\
     \midrule
-    \multirow{3}{*}{Bus Priority} & Fixed Timer & 3,350 & 6,619 & 107.2 & 67.4 \\
-    & Q-Learning & 3,305 ($-$1.4\%) & 6,743 & 102.3 & 67.3 \\
-    & SARSA & 3,237 ($-$3.4\%) & 6,700 & 99.1 & 67.5 \\
+    \multirow{5}{*}{Bus Priority} & Fixed Timer & 3,408 & 6,667 & 109.0 & 67.2 \\
+    & Q-Learning & 3,236 ($-$5.0\%) & 6,669 & 103.5 & 67.6 \\
+    & SARSA & 3,197 ($-$6.2\%) & 6,655 & 102.3 & 68.0 \\
+    & Coord.\ Q-Learning & 3,678 (+7.9\%) & 6,701 & 117.7 & 67.3 \\
+    & Coord.\ SARSA & 3,474 (+1.9\%) & 6,567 & 111.2 & 67.7 \\
     \bottomrule
 \end{tabular}
 \end{table}
@@ -314,7 +326,7 @@ This system uses \textbf{synthetically generated data} calibrated to Dubai traff
 
 \subsection{Dashboard Overview}
 
-The dashboard is implemented as a \textbf{Vite + React 18} single-page application with a dark operations-centre theme (background \texttt{\#09090b}, multi-color section accents). The UI loads 7 pre-computed JSON files from \texttt{public/data/} --- no runtime backend is required. Each of the 5 tabs presents a distinct analytical view. Deployed on Vercel at: \url{https://smart-traffic-management.vercel.app}. Source: \url{https://github.com/KartikJoshi23/smart-traffic-management}.
+The dashboard is implemented as a \textbf{Vite + React 18} single-page application with a dark operations-centre theme (background \texttt{\#09090b}, multi-color section accents). The UI loads 9 pre-computed JSON files from \texttt{public/data/} --- no runtime backend is required. Each of the 5 tabs presents a distinct analytical view. Deployed on Vercel at: \url{https://smart-traffic-management.vercel.app}. Source: \url{https://github.com/KartikJoshi23/smart-traffic-management}.
 
 \begin{figure}[H]
     \centering
@@ -327,11 +339,11 @@ The dashboard is implemented as a \textbf{Vite + React 18} single-page applicati
 
 \textbf{Tab 1 --- Dashboard (Overview):} Four KPI cards (throughput, wait reduction, emissions, safety) with section-colored accent borders. Economic Impact panel translates simulation metrics to AED savings using Dubai-specific parameters (Value of Time AED~2.08/min, fuel idle 0.8~L/hr, CO$_2$ 2.31~kg/L) [6]. SVG mini-map of the 4$\times$4 intersection grid with labeled Dubai zone names.
 
-\textbf{Tab 2 --- Live Simulation:} Full SVG road network with 16 clickable intersection nodes. Congestion-colored borders (green/amber/red). Animated vehicle dots flowing between intersections. NS/EW queue bars with labels. Agent toggle (Q-Learning / SARSA / Fixed Timer) uses \textit{trained} Q-tables. \textbf{XAI Decision Panel}: shows Q-values for all 3 actions, confidence \% (Q-value differential), and human-readable reasoning. \textbf{Chaos Mode}: Sandstorm ($-$45\% capacity), Sensor Failure (corrupted readings), Emergency Vehicle (signal preemption). Play/Pause/Step controls with 1--5$\times$ speed.
+\textbf{Tab 2 --- Live Simulation:} Full SVG road network with 16 clickable intersection nodes. Congestion-colored borders (green/amber/red). Animated vehicle dots flowing between intersections. NS/EW queue bars with labels. Agent toggle (Q-Learning / SARSA / Fixed Timer / Coord.\ Q-Learning / Coord.\ SARSA) uses \textit{trained} Q-tables. \textbf{XAI Decision Panel}: shows Q-values for all 3 actions, confidence \% (Q-value differential), human-readable reasoning, and coordinator override annotations for coordinated agents. \textbf{Chaos Mode}: Sandstorm ($-$45\% capacity), Sensor Failure (corrupted readings), Emergency Vehicle (signal preemption). Play/Pause/Step controls with 1--5$\times$ speed.
 
 \textbf{Tab 3 --- Training Analysis:} Area charts with gradient fills for reward, wait time, throughput, and epsilon decay across 300 episodes. Per-scenario toggle. Summary statistics from last 50 episodes.
 
-\textbf{Tab 4 --- Scenario Comparison:} Color-coded heatmap: 5 scenarios $\times$ 3 agents $\times$ 4 metrics. Improvement percentages vs.\ Fixed Timer with directional indicators. Best-agent highlighting.
+\textbf{Tab 4 --- Scenario Comparison:} Color-coded heatmap: 5 scenarios $\times$ 5 agents $\times$ 4 metrics. Improvement percentages vs.\ Fixed Timer with directional indicators. Best-agent highlighting.
 
 \textbf{Tab 5 --- MCDM Evaluation:} Criteria weight bars, WSM/TOPSIS ranking tables with score bars, radar chart (all alternatives overlaid), WSM vs TOPSIS grouped bar chart, sensitivity analysis table with stability badges. \textbf{Export}: Download results as CSV or JSON.
 

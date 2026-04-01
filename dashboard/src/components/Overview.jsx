@@ -10,8 +10,8 @@ const NAMES = [
   "Al Quoz","Jumeirah","Palm Tunnel","Marina JBR",
   "DIP","Academic City","Al Barsha","Airport T3"
 ]
-const AGENT_COLORS = { fixed_timer: "#ef4444", q_learning: "#3b82f6", sarsa: "#22c55e" }
-const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
+const AGENT_COLORS = { fixed_timer: "#ef4444", q_learning: "#3b82f6", sarsa: "#22c55e", coordinated_q_learning: "#06b6d4", coordinated_sarsa: "#8b5cf6" }
+const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA", coordinated_q_learning: "Coord. Q-Learning", coordinated_sarsa: "Coord. SARSA" }
 const TT = { background: "#18181b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#e4e4e7", fontSize: 12 }
 
 export default function Overview({ data }) {
@@ -32,18 +32,19 @@ export default function Overview({ data }) {
 
   const rush = cmp.rush_hour?.agents || {}
   const ftW = rush.fixed_timer?.metrics?.avg_wait_time || 1
-  const qlW = rush.q_learning?.metrics?.avg_wait_time || 0
-  const saW = rush.sarsa?.metrics?.avg_wait_time || 0
-  const bestRLW = Math.min(qlW, saW)
+  const rlWaits = Object.entries(rush).filter(([k]) => k !== "fixed_timer").map(([,v]) => v.metrics?.avg_wait_time).filter(Boolean)
+  const bestRLW = rlWaits.length ? Math.min(...rlWaits) : 0
   const waitPct = (((ftW - bestRLW) / ftW) * 100).toFixed(1)
 
   const ftTP = rush.fixed_timer?.metrics?.avg_throughput || 1
-  const qlTP = rush.q_learning?.metrics?.avg_throughput || 0
-  const tpPct = (((qlTP - ftTP) / ftTP) * 100).toFixed(1)
+  const rlTPs = Object.entries(rush).filter(([k]) => k !== "fixed_timer").map(([,v]) => v.metrics?.avg_throughput).filter(Boolean)
+  const bestRLTP = rlTPs.length ? Math.max(...rlTPs) : 0
+  const tpPct = (((bestRLTP - ftTP) / ftTP) * 100).toFixed(1)
 
   const ftE = rush.fixed_timer?.metrics?.avg_emissions || 1
-  const qlE = rush.q_learning?.metrics?.avg_emissions || 0
-  const ePct = (((ftE - qlE) / ftE) * 100).toFixed(1)
+  const rlEmissions = Object.entries(rush).filter(([k]) => k !== "fixed_timer").map(([,v]) => v.metrics?.avg_emissions).filter(Boolean)
+  const bestRLE = rlEmissions.length ? Math.min(...rlEmissions) : 0
+  const ePct = (((ftE - bestRLE) / ftE) * 100).toFixed(1)
 
   const kpis = [
     { icon: Zap, label: "Peak Throughput", value: bestTP.v?.toFixed(0), unit: "vehicles/episode",
@@ -60,7 +61,7 @@ export default function Overview({ data }) {
   // avg_wait_time is cumulative queue-steps across 200 steps (total wait = sum of queue each step)
   // Each step = 30 seconds simulated time. Per-vehicle wait = total_wait / throughput (seconds)
   const ftTPVal = rush.fixed_timer?.metrics?.avg_throughput || 1
-  const rlTPVal = rush.q_learning?.metrics?.avg_throughput || rush.sarsa?.metrics?.avg_throughput || 1
+  const rlTPVal = bestRLTP || 1
   // Per-vehicle wait time in seconds: (cumulative_wait / num_vehicles_passed) * 30s/step
   const ftWaitPerVeh = (ftW / ftTPVal) * 30   // seconds per vehicle
   const rlWaitPerVeh = (bestRLW / rlTPVal) * 30  // seconds per vehicle
@@ -201,6 +202,8 @@ export default function Overview({ data }) {
               <Radar name="Fixed Timer" dataKey="Fixed Timer" stroke="#ef4444" fill="#ef4444" fillOpacity={0.08} strokeWidth={2}/>
               <Radar name="Q-Learning" dataKey="Q-Learning" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={2}/>
               <Radar name="SARSA" dataKey="SARSA" stroke="#22c55e" fill="#22c55e" fillOpacity={0.08} strokeWidth={2}/>
+              <Radar name="Coord. Q-Learning" dataKey="Coord. Q-Learning" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.08} strokeWidth={2}/>
+              <Radar name="Coord. SARSA" dataKey="Coord. SARSA" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.08} strokeWidth={2}/>
               <Legend wrapperStyle={{ fontSize: 10 }}/>
             </RadarChart>
           </ResponsiveContainer>

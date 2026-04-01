@@ -2,7 +2,7 @@ import { useState } from "react"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts"
 
 const SCENARIOS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const AGENTS = { q_learning: { label: "Q-Learning", color: "#3b82f6" }, sarsa: { label: "SARSA", color: "#22c55e" } }
+const AGENTS = { q_learning: { label: "Q-Learning", color: "#3b82f6" }, sarsa: { label: "SARSA", color: "#22c55e" }, coordinated_q_learning: { label: "Coord. Q-Learning", color: "#06b6d4" }, coordinated_sarsa: { label: "Coord. SARSA", color: "#8b5cf6" } }
 const METRICS = { rewards: "Cumulative Reward", avg_wait: "Avg Wait Time", avg_throughput: "Throughput", epsilon: "Exploration Rate" }
 const METRIC_KEYS = { rewards: "episode_rewards", avg_wait: "avg_wait_times", avg_throughput: "throughputs", epsilon: "epsilons" }
 const TT = { background: "#18181b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "#e4e4e7", fontSize: 12 }
@@ -17,7 +17,9 @@ export default function TrainingCurves({ data }) {
   const sd = results[scenario] || {}
   const qlH = sd.q_learning?.history
   const saH = sd.sarsa?.history
-  const n = qlH?.episode_rewards?.length || saH?.episode_rewards?.length || 0
+  const cqH = sd.coordinated_q_learning?.history
+  const csH = sd.coordinated_sarsa?.history
+  const n = qlH?.episode_rewards?.length || saH?.episode_rewards?.length || cqH?.episode_rewards?.length || csH?.episode_rewards?.length || 0
 
   const chartData = Array.from({ length: n }, (_, i) => {
     const pt = { episode: i + 1 }
@@ -68,6 +70,14 @@ export default function TrainingCurves({ data }) {
                 <stop offset="5%" stopColor="#22c55e" stopOpacity={0.2}/>
                 <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
               </linearGradient>
+              <linearGradient id="gCyan" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.2}/>
+                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="gViolet" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)"/>
             <XAxis dataKey="episode" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false}
@@ -77,6 +87,8 @@ export default function TrainingCurves({ data }) {
             <Legend wrapperStyle={{ fontSize: 11 }}/>
             <Area type="monotone" dataKey="Q-Learning" stroke="#3b82f6" fill="url(#gBlue)" strokeWidth={2} dot={false}/>
             <Area type="monotone" dataKey="SARSA" stroke="#22c55e" fill="url(#gGreen)" strokeWidth={2} dot={false}/>
+            <Area type="monotone" dataKey="Coord. Q-Learning" stroke="#06b6d4" fill="url(#gCyan)" strokeWidth={2} dot={false}/>
+            <Area type="monotone" dataKey="Coord. SARSA" stroke="#8b5cf6" fill="url(#gViolet)" strokeWidth={2} dot={false}/>
           </AreaChart>
         </ResponsiveContainer>
       </div>

@@ -26,6 +26,8 @@ export default function App() {
           "training_results", "mcdm_results", "scenario_comparison",
           "intersection_meta", "live_simulation_q_learning",
           "live_simulation_sarsa", "live_simulation_fixed_timer",
+          "live_simulation_coordinated_q_learning",
+          "live_simulation_coordinated_sarsa",
         ]
         const r = {}
         for (const f of files) {

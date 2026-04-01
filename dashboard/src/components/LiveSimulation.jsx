@@ -14,6 +14,8 @@ const AGENTS = {
   q_learning: { label: "Q-Learning", color: "#3b82f6" },
   sarsa: { label: "SARSA", color: "#22c55e" },
   fixed_timer: { label: "Fixed Timer", color: "#ef4444" },
+  coordinated_q_learning: { label: "Coord. Q-Learn", color: "#06b6d4" },
+  coordinated_sarsa: { label: "Coord. SARSA", color: "#8b5cf6" },
 }
 const ACTIONS = ["HOLD","SWITCH","EXTEND"]
 const ACT_COLORS = ["#3b82f6","#f59e0b","#a855f7"]
@@ -32,6 +34,8 @@ export default function LiveSimulation({ data }) {
     q_learning: data.live_simulation_q_learning,
     sarsa: data.live_simulation_sarsa,
     fixed_timer: data.live_simulation_fixed_timer,
+    coordinated_q_learning: data.live_simulation_coordinated_q_learning,
+    coordinated_sarsa: data.live_simulation_coordinated_sarsa,
   }
   const [agentType, setAgentType] = useState("q_learning")
   const [step, setStep] = useState(0)
@@ -75,6 +79,8 @@ export default function LiveSimulation({ data }) {
   const sqv = qv[selInt]
 
   // XAI
+  const overrides = frame?.overrides || []
+  const selOverride = overrides.find(o => o.intersection === selInt)
   let reason = "", conf = 50, factors = []
   if (si && sqv) {
     const q = sqv.q_values || [0,0,0]
@@ -87,6 +93,11 @@ export default function LiveSimulation({ data }) {
       if (sa === 0) { reason = "Hold current phase - active queue being served"; factors = ["Q(Hold)=" + q[0].toFixed(2), heavier + " heavier"] }
       else if (sa === 1) { reason = "Switch phase - serve waiting direction"; factors = ["Q(Switch)=" + q[1].toFixed(2), "Imbalance"] }
       else { reason = "Extend green - near clearance"; factors = ["Q(Ext)=" + q[2].toFixed(2), "Efficiency"] }
+    }
+    if (selOverride) {
+      const proto = selOverride.reason.replace("_", " ")
+      reason = String.fromCodePoint(9889) + " Coordinator override (" + proto + "): " + selOverride.detail
+      factors = [...factors, "Override: " + ACTIONS[selOverride.original] + String.fromCharCode(8594) + ACTIONS[selOverride.final]]
     }
   }
 

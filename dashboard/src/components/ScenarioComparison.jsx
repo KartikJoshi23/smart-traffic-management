@@ -2,7 +2,7 @@ import { useState } from "react"
 import { ArrowUpRight, ArrowDownRight } from "lucide-react"
 
 const SCENARIOS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const AGENTS = { fixed_timer: { label: "Fixed Timer", color: "#ef4444" }, q_learning: { label: "Q-Learning", color: "#3b82f6" }, sarsa: { label: "SARSA", color: "#22c55e" } }
+const AGENTS = { fixed_timer: { label: "Fixed Timer", color: "#ef4444" }, q_learning: { label: "Q-Learning", color: "#3b82f6" }, sarsa: { label: "SARSA", color: "#22c55e" }, coordinated_q_learning: { label: "Coord. Q-Learning", color: "#06b6d4" }, coordinated_sarsa: { label: "Coord. SARSA", color: "#8b5cf6" } }
 const METRICS = ["avg_throughput", "avg_wait_time", "avg_emissions", "avg_safety_score"]
 const LABELS = { avg_throughput: "Throughput", avg_wait_time: "Wait Time", avg_emissions: "Emissions", avg_safety_score: "Safety" }
 const HIGHER = { avg_throughput: true, avg_wait_time: false, avg_emissions: false, avg_safety_score: true }
