@@ -140,9 +140,9 @@ export default function LiveSimulation({ data }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
         {/* SVG Grid */}
         <div className="card" style={{ padding: 20 }}>
-          <svg viewBox="0 0 740 740" style={{ width: "100%", maxHeight: 580, borderRadius: 10 }}>
+          <svg viewBox="0 0 820 740" style={{ width: "100%", maxHeight: 580, borderRadius: 10 }}>
             {/* Background */}
-            <rect width="740" height="740" fill="#0c0c0f" rx="10"/>
+            <rect width="820" height="740" fill="#0c0c0f" rx="10"/>
 
             {/* Grid pattern */}
             <defs>
@@ -150,28 +150,32 @@ export default function LiveSimulation({ data }) {
                 <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
               </pattern>
             </defs>
-            <rect width="740" height="740" fill="url(#gridP)"/>
+            <rect width="820" height="740" fill="url(#gridP)"/>
 
             {/* Sandstorm overlay */}
-            {chaos.sand && <rect width="740" height="740" fill="rgba(245,158,11,0.06)" rx="10"/>}
+            {chaos.sand && <rect width="820" height="740" fill="rgba(245,158,11,0.06)" rx="10"/>}
 
-            {/* Zone labels - left side, colored */}
-            {ZONES.map((z, i) => (
-              <text key={z} x={22} y={118 + i * 155} fill={ZONE_COLORS[i]} fontSize="10" fontWeight="800" fontFamily="Inter" opacity="0.7">{z}</text>
-            ))}
+            {/* Zone labels - left side with background pill */}
+            {ZONES.map((z, i) => {
+              const zy = 118 + i * 155
+              return <g key={z}>
+                <rect x={8} y={zy - 10} width={68} height={20} rx={6} fill={ZONE_COLORS[i]} opacity={0.12}/>
+                <text x={42} y={zy + 3} textAnchor="middle" fill={ZONE_COLORS[i]} fontSize="9" fontWeight="800" fontFamily="Inter">{z}</text>
+              </g>
+            })}
 
             {/* Roads - Horizontal */}
             {[0,1,2,3].map(i => {
               const y = 110 + i * 155
               return <g key={"rh"+i}>
-                <rect x={55} y={y-18} width={650} height={36} fill="#151518" rx="3"/>
-                <line x1={55} y1={y} x2={705} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
+                <rect x={100} y={y-18} width={680} height={36} fill="#151518" rx="3"/>
+                <line x1={100} y1={y} x2={780} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
               </g>
             })}
 
             {/* Roads - Vertical */}
             {[0,1,2,3].map(i => {
-              const x = 140 + i * 155
+              const x = 200 + i * 165
               return <g key={"rv"+i}>
                 <rect x={x-18} y={55} width={36} height={650} fill="#151518" rx="3"/>
                 <line x1={x} y1={55} x2={x} y2={705} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
@@ -181,7 +185,7 @@ export default function LiveSimulation({ data }) {
             {/* Intersections */}
             {grid.map((inter, i) => {
               const row = Math.floor(i / 4), col = i % 4
-              const cx = 140 + col * 155, cy = 110 + row * 155
+              const cx = 200 + col * 165, cy = 110 + row * 155
               const cg = congLevel(inter.queue_ns, inter.queue_ew)
               const isSel = selInt === i
               const hasFail = chaos.sensor && (i % 3 === step % 3)
@@ -246,7 +250,7 @@ export default function LiveSimulation({ data }) {
             })}
 
             {/* Legend */}
-            <g transform="translate(440, 718)">
+            <g transform="translate(510, 718)">
               <rect x={0} y={-4} width={10} height={10} fill="#3b82f6" rx={2} opacity={0.7}/>
               <text x={14} y={4} fill="#a1a1aa" fontSize="9" fontFamily="Inter">NS Queue</text>
               <rect x={85} y={-4} width={10} height={10} fill="#f59e0b" rx={2} opacity={0.7}/>

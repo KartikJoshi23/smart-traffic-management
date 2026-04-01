@@ -102,11 +102,11 @@ body {
 
 /* Navigation */
 .nav-tab {
-  padding: 10px 20px;
+  padding: 10px 22px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -119,14 +119,15 @@ body {
   position: relative;
 }
 .nav-tab:hover {
-  color: var(--text-secondary);
-  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.05);
 }
 .nav-tab.active {
   color: white;
   font-weight: 700;
   background: var(--accent-color, var(--blue));
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3), 0 0 20px color-mix(in srgb, var(--accent-color, var(--blue)) 25%, transparent);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.4), 0 0 24px color-mix(in srgb, var(--accent-color, var(--blue)) 30%, transparent);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 /* Buttons */

@@ -42,7 +42,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
       {/* Header */}
-      <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-dim)" }}>
+      <header style={{ background: "linear-gradient(135deg, #111116 0%, #16161d 50%, #131318 100%)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {/* Traffic light SVG */}
@@ -75,9 +75,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* Navigation - pill tabs */}
-      <nav style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-dim)" }}>
-        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 28px", display: "flex", gap: 2, alignItems: "center" }}>
+      {/* Navigation */}
+      <nav style={{ background: "linear-gradient(135deg, #14141a 0%, #1a1a24 40%, #1a1820 70%, #161620 100%)", borderBottom: "1px solid rgba(255,255,255,0.08)", borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+        <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 28px", display: "flex", gap: 4, alignItems: "center" }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={"nav-tab" + (tab === t.id ? " active" : "")}
