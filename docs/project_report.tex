@@ -74,6 +74,12 @@
 \maketitle
 \thispagestyle{fancy}
 
+\vspace{0.2cm}
+\begin{center}
+\textbf{GitHub}: \url{https://github.com/KartikJoshi23/smart-traffic-management} \\
+\textbf{Live Dashboard}: \url{https://dubai-smart-traffic-management.vercel.app/}
+\end{center}
+
 \vspace{0.3cm}
 \begin{center}
 \begin{tabular}{ll}
@@ -92,6 +98,41 @@ This report presents the complete design, implementation, and evaluation of a Sm
 
 \newpage
 \tableofcontents
+\newpage
+
+%=============================================================================
+\section{Executive Summary}
+%=============================================================================
+
+This section provides a high-level overview of the project for presentation purposes.
+
+\subsection{Problem}
+Dubai's 700+ signalized intersections operate on fixed-timer schedules that cannot adapt to real-time traffic conditions. This costs an estimated AED 4.6 billion annually in lost productivity, fuel waste, and environmental damage.
+
+\subsection{Solution}
+We developed a \textbf{Multi-Agent Reinforcement Learning (MARL)} system where 16 intersection controllers independently learn optimal signal timing policies using Q-Learning and SARSA algorithms, evaluated by WSM and TOPSIS multi-criteria decision analysis.
+
+\subsection{Key Results}
+\begin{itemize}[nosep]
+    \item \textbf{16.6\% wait time reduction} in Rush Hour (Q-Learning vs.~Fixed Timer)
+    \item \textbf{16.6\% emissions reduction} in Rush Hour (704 kg vs.~844 kg CO$_2$)
+    \item \textbf{21.8\% wait reduction} in Incident scenarios (SARSA)
+    \item \textbf{+5.4\% throughput improvement} in Rush Hour (SARSA: 11,983 vs.~11,192 vehicles)
+    \item \textbf{Projected AED 134M} annual savings if deployed across Dubai's 700 intersections
+\end{itemize}
+
+\subsection{Key Innovations}
+\begin{enumerate}[nosep]
+    \item \textbf{Neighbor-Aware State Representation}: 5D state includes adjacent intersection queue pressure, giving RL agents an information advantage over fixed timers
+    \item \textbf{Explainable AI (XAI)}: Real Q-values exported per frame; dashboard shows decision confidence and human-readable reasoning for every signal action
+    \item \textbf{Economic Impact Analysis}: Simulation metrics translated to AED savings using Dubai-specific Value of Time, fuel consumption, and carbon credit parameters
+    \item \textbf{Chaos Mode Stress Testing}: Sandstorm, sensor failure, and emergency vehicle scenarios demonstrate system resilience
+    \item \textbf{Trained Controller Deployment}: Live simulation uses learned Q-tables from 300 episodes of training, not untrained agents
+\end{enumerate}
+
+\subsection{Technology Stack}
+Python (NumPy, Pandas) for RL simulation and MCDM $\rightarrow$ React.js (Vite + Recharts + Tailwind CSS) for interactive dashboard $\rightarrow$ Vercel for hosting $\rightarrow$ GitHub for version control.
+
 \newpage
 
 %=============================================================================
@@ -131,9 +172,9 @@ The system simulates a 4$\times$4 grid of 16 intersections based on real Dubai l
 
 Reinforcement learning has been extensively studied for traffic signal control. The key advantage over traditional approaches is the ability to learn optimal policies directly from interaction with the environment without requiring explicit traffic models.
 
-\textbf{Q-Learning} \cite{watkins1992} is an off-policy temporal-difference method that learns the value of the optimal action in each state, regardless of the action actually taken. This allows faster convergence but can overestimate action values.
+\textbf{Q-Learning} [1] is an off-policy temporal-difference method that learns the value of the optimal action in each state, regardless of the action actually taken. This allows faster convergence but can overestimate action values.
 
-\textbf{SARSA} (State-Action-Reward-State-Action) \cite{rummery1994} is an on-policy method that updates Q-values based on the action actually taken by the current policy. This tends to learn more conservative (safer) policies because it accounts for exploration during learning.
+\textbf{SARSA} (State-Action-Reward-State-Action) [2] is an on-policy method that updates Q-values based on the action actually taken by the current policy. This tends to learn more conservative (safer) policies because it accounts for exploration during learning.
 
 \subsection{Multi-Agent Systems}
 
@@ -925,7 +966,7 @@ Under default weights (Efficiency 35\%, Safety 25\%, Emissions 25\%, Bus Delay 1
 \begin{itemize}[nosep]
     \item \textbf{Simplified traffic model}: The Poisson arrival model does not capture vehicle-level dynamics (car following, lane changing). A microscopic simulator (SUMO) would add realism.
     \item \textbf{No inter-agent communication}: Agents learn independently. Adding explicit message passing or attention-based coordination could improve network-level performance.
-    \item \textbf{Fixed state discretization}: 50 states may lose information in high-traffic scenarios. Deep Q-Networks (DQN) with continuous states could improve scalability.
+    \item \textbf{Fixed state discretization}: 150 states per intersection may lose information in high-traffic scenarios. Deep Q-Networks (DQN) with continuous states could improve scalability.
     \item \textbf{No real sensor integration}: The system uses simulated data. Integration with actual IoT sensors and camera-based CNN detection would be the natural next step.
     \item \textbf{Static MCDM weights}: Weights are fixed by domain assumption. A stakeholder elicitation process (e.g., AHP) could derive more justified weights.
 \end{itemize}
@@ -934,7 +975,38 @@ Under default weights (Efficiency 35\%, Safety 25\%, Emissions 25\%, Bus Delay 1
 \section{Conclusion}
 %=============================================================================
 
-This project demonstrates that multi-agent reinforcement learning can significantly outperform fixed-timer traffic control across diverse traffic scenarios. Q-Learning and SARSA agents learn adaptive signal timing policies that reduce wait times, increase throughput, and lower emissions compared to the non-adaptive baseline. The MCDM framework (WSM and TOPSIS) provides a principled method for comparing policies across multiple competing objectives, with sensitivity analysis revealing the robustness of rankings to weight changes. The React.js dashboard makes these complex results accessible through interactive visualization, enabling stakeholders to explore trade-offs and make informed decisions about traffic management strategies.
+This project demonstrates that multi-agent reinforcement learning can significantly outperform fixed-timer traffic control in dynamic traffic conditions. The key quantitative results are:
+
+\begin{itemize}[nosep]
+    \item \textbf{Rush Hour}: Q-Learning reduces wait time by 16.6\% (26,374 $\rightarrow$ 22,001), increases throughput by 6.6\% (11,192 $\rightarrow$ 11,927), and cuts emissions by 16.6\% (844 $\rightarrow$ 704 kg CO$_2$).
+    \item \textbf{Incident Response}: SARSA achieves the strongest improvement---21.8\% wait reduction and 8.0\% emission reduction---demonstrating the value of conservative on-policy learning under disruption.
+    \item \textbf{Normal Traffic}: Fixed Timer performs comparably, confirming that RL is most valuable when traffic patterns are non-stationary.
+    \item \textbf{MCDM Consistency}: WSM and TOPSIS converge on the same winner (SARSA + Bus Priority) under default weights, and rankings remain stable under $\pm$15\% weight perturbation.
+    \item \textbf{Economic Projection}: Deploying adaptive RL across Dubai's 700 intersections could save approximately AED 134M/year in time, fuel, and emission costs.
+\end{itemize}
+
+The MCDM framework (WSM and TOPSIS) provides a principled method for comparing policies across multiple competing objectives, with sensitivity analysis revealing the robustness of rankings to weight changes. The Explainable AI panel transforms Q-table internals into human-readable decision justifications, addressing the trust barrier for government deployment. The Chaos Mode stress tests (sandstorm, sensor failure, emergency vehicle) demonstrate resilience thinking critical for real-world infrastructure.
+
+The React.js dashboard---deployed on Vercel and accessible at \url{https://dubai-smart-traffic-management.vercel.app/}---makes these complex results accessible through interactive visualization, enabling stakeholders to explore trade-offs and make informed decisions about traffic management strategies. All source code is publicly available at \url{https://github.com/KartikJoshi23/smart-traffic-management}.
+
+%=============================================================================
+\section{Team Contributions}
+%=============================================================================
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l X}
+    \toprule
+    \textbf{Member} & \textbf{Contributions} \\
+    \midrule
+    Kartik Joshi & Project lead; system architecture; RL environment design (\texttt{environment.py}); reward function engineering; dashboard development (React/Vite); Vercel deployment; GitHub management \\
+    Anurag Deverakonda & Q-Learning and SARSA agent implementation (\texttt{agents.py}); multi-agent controller; hyperparameter tuning; training loop optimization \\
+    Nandana Santosh & MCDM implementation (WSM, TOPSIS, sensitivity analysis in \texttt{mcdm.py}); criteria weight selection; MCDM dashboard component \\
+    Weiqi Liu & Synthetic dataset generation (\texttt{generate\_synthetic.py}); Dubai traffic pattern calibration; data loader module; CSV schema design \\
+    Advait Dalvi & Simulation engine (\texttt{simulation.py}); scenario design (5 traffic scenarios); live simulation frame export; JSON data pipeline \\
+    Gautam Barai & Dashboard visualization components (Training Curves, Scenario Comparison); economic impact analysis; XAI panel; documentation (LaTeX report and technical specifications) \\
+    \bottomrule
+\end{tabularx}
+\end{center}
 
 %=============================================================================
 \section*{References}
