@@ -52,7 +52,7 @@ export default function Overview({ data }) {
     { icon: Clock, label: "Wait Reduction", value: waitPct + "%", unit: "in rush hour",
       badge: Math.round(ftW - bestRLW) + " steps saved", pos: true, color: "#22c55e", glow: "glow-green" },
     { icon: Wind, label: "Emission Savings", value: ePct + "%", unit: "CO\u2082 reduced",
-      badge: Math.round(ftE - qlE) + " kg saved", pos: +ePct > 0, color: "#f59e0b", glow: "glow-amber" },
+      badge: Math.round(ftE - bestRLE) + " kg saved", pos: +ePct > 0, color: "#f59e0b", glow: "glow-amber" },
     { icon: Shield, label: "Safety Score", value: bestSafe.v?.toFixed(1), unit: "/ 100",
       badge: (bestSafe.ag || "").replace("_", " "), pos: true, color: "#a855f7", glow: "glow-violet" },
   ]
