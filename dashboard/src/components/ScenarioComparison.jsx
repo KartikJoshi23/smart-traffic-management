@@ -1,4 +1,4 @@
-﻿import {
+import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts"
 
@@ -12,7 +12,7 @@ const METRICS_INFO = [
   { key: "avg_emissions", label: "Emissions", unit: "kg CO\u2082", higher: false },
   { key: "avg_safety_score", label: "Safety", unit: "/100", higher: true },
 ]
-const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4", fontSize: 11 }
+const ttStyle = { background: "#1a1a1e", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#fafafa", fontSize: 11 }
 
 export default function ScenarioComparison({ data }) {
   const cmp = data.scenario_comparison
@@ -60,8 +60,8 @@ export default function ScenarioComparison({ data }) {
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={buildChartData(mi.key)} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="scenario" tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="scenario" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={ttStyle} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
                 <Bar dataKey="Fixed Timer" fill="#EF4444" radius={[3, 3, 0, 0]} />

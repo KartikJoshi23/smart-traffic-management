@@ -1,4 +1,4 @@
-﻿import { Zap, Clock, Wind, Shield, DollarSign, Fuel, Leaf, TrendingUp } from "lucide-react"
+import { Zap, Clock, Wind, Shield, DollarSign, Fuel, Leaf, TrendingUp } from "lucide-react"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -13,7 +13,7 @@ const NAMES = [
 
 const AGENT_COLORS = { fixed_timer: "#EF4444", q_learning: "#3B82F6", sarsa: "#10B981" }
 const AGENT_LABELS = { fixed_timer: "Fixed Timer", q_learning: "Q-Learning", sarsa: "SARSA" }
-const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4" }
+const ttStyle = { background: "#1a1a1e", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#fafafa" }
 
 export default function Overview({ data }) {
   const cmp = data.scenario_comparison
@@ -176,8 +176,8 @@ export default function Overview({ data }) {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={barData} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="agent" tick={{ fill: "#a8a29e", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "#a8a29e", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="agent" tick={{ fill: "#a1a1aa", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#a1a1aa", fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={ttStyle} />
               <Bar dataKey="Throughput" fill="#3B82F6" radius={[4,4,0,0]} />
               <Bar dataKey="Wait Time" fill="#F59E0B" radius={[4,4,0,0]} />
@@ -193,7 +193,7 @@ export default function Overview({ data }) {
           <ResponsiveContainer width="100%" height={260}>
             <RadarChart data={radarData}>
               <PolarGrid stroke="rgba(255,255,255,0.06)" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: "#a8a29e", fontSize: 10 }} />
+              <PolarAngleAxis dataKey="metric" tick={{ fill: "#a1a1aa", fontSize: 10 }} />
               <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
               <Radar name="Fixed Timer" dataKey="Fixed Timer" stroke="#EF4444" fill="#EF4444" fillOpacity={0.1} />
               <Radar name="Q-Learning" dataKey="Q-Learning" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.15} />

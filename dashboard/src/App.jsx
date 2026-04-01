@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { LayoutDashboard, Play, TrendingUp, GitCompare, Scale, ExternalLink } from "lucide-react"
 import Overview from "./components/Overview"
 import LiveSimulation from "./components/LiveSimulation"
@@ -47,8 +47,8 @@ export default function App() {
       <header style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={{ maxWidth: 1440, margin: "0 auto", padding: "14px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, var(--gold-dim), var(--bg-elevated))", border: "1px solid var(--border-medium)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-              {"🚦"}
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, var(--cyan-dim), var(--bg-elevated))", border: "1px solid var(--border-medium)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+              {"??"}
             </div>
             <div>
               <h1 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
@@ -98,7 +98,10 @@ export default function App() {
 
       <footer style={{ borderTop: "1px solid var(--border-subtle)", padding: "16px 28px", textAlign: "center" }}>
         <p style={{ fontSize: 11, color: "var(--text-muted)" }}>
-          MAIB {"\u00B7"} RDMU {"\u00B7"} Group 2 {"\u00B7"} Kartik Joshi, Anurag Deverakonda, Nandana Santosh, Weiqi Liu, Advait Dalvi, Gautam Barai
+          Made with <span style={{ color: "#ef4444" }}>{"\u2764"}</span> by Kartik Joshi {"\u2022"} Anurag Deverakonda {"\u2022"} Nandana Santosh {"\u2022"} Weiqi Liu {"\u2022"} Advait Dalvi {"\u2022"} Gautam Barai
+        </p>
+        <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, opacity: 0.6 }}>
+          MAIB {"\u2022"} RDMU {"\u2022"} Group 2
         </p>
       </footer>
     </div>

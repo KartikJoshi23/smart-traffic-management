@@ -1,4 +1,4 @@
-﻿import { useState } from "react"
+import { useState } from "react"
 import { Download } from "lucide-react"
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -7,7 +7,7 @@ import {
 
 const AGENT_COLORS = { "Fixed Timer": "#EF4444", "Q-Learning": "#3B82F6", "SARSA": "#10B981", "Q-Learning + Bus Priority": "#6366F1", "SARSA + Bus Priority": "#14B8A6" }
 const SC_LABELS = { normal: "Normal", rush_hour: "Rush Hour", incident: "Incident", event: "Event", bus_priority: "Bus Priority" }
-const ttStyle = { background: "#19191c", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#f5f5f4", fontSize: 11 }
+const ttStyle = { background: "#1a1a1e", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, color: "#fafafa", fontSize: 11 }
 
 function downloadJSON(obj, filename) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" })
@@ -20,19 +20,18 @@ function downloadJSON(obj, filename) {
 function downloadCSV(mcdm, scenario) {
   const results = mcdm[scenario]
   if (!results) return
-  const headers = ["Policy", "WSM Score", "TOPSIS Score", "WSM Rank", "TOPSIS Rank", "Throughput", "Safety", "Emissions", "Bus Delay"]
+  const alts = results.alternatives || []
+  const wsm = results.wsm || {}
+  const topsis = results.topsis || {}
+  const headers = ["Policy", "WSM Score", "TOPSIS Score", "WSM Rank", "TOPSIS Rank"]
   const rows = [headers.join(",")]
-  Object.entries(results.wsm_scores || {}).forEach(([policy]) => {
+  alts.forEach((alt, i) => {
     rows.push([
-      policy,
-      results.wsm_scores[policy]?.toFixed(4),
-      results.topsis_scores?.[policy]?.toFixed(4),
-      results.wsm_ranking?.indexOf(policy) + 1,
-      results.topsis_ranking?.indexOf(policy) + 1,
-      results.normalized_matrix?.[policy]?.throughput?.toFixed(4),
-      results.normalized_matrix?.[policy]?.safety_score?.toFixed(4),
-      results.normalized_matrix?.[policy]?.emissions?.toFixed(4),
-      results.normalized_matrix?.[policy]?.bus_delay?.toFixed(4),
+      alt,
+      wsm.scores?.[i]?.toFixed(4),
+      topsis.scores?.[i]?.toFixed(4),
+      (wsm.ranked_alternatives || []).indexOf(alt) + 1,
+      (topsis.ranked_alternatives || []).indexOf(alt) + 1,
     ].join(","))
   })
   const blob = new Blob([rows.join("\n")], { type: "text/csv" })
@@ -51,30 +50,45 @@ export default function MCDMAnalysis({ data }) {
   const results = mcdm[scenario]
   if (!results) return <p style={{ color: "var(--text-label)" }}>No results for {scenario}</p>
 
-  const wsmScores = results.wsm_scores || {}
-  const topsisScores = results.topsis_scores || {}
-  const wsmRanking = results.wsm_ranking || []
-  const topsisRanking = results.topsis_ranking || []
-  const weights = results.weights || {}
+  const wsmScores = {}
+  const topsisScores = {}
+  const alternatives = results.alternatives || []
+  const wsm = results.wsm || {}
+  const topsis = results.topsis || {}
+
+  // Map array-indexed scores to alternative-keyed dicts
+  alternatives.forEach((alt, i) => {
+    wsmScores[alt] = wsm.scores?.[i] || 0
+    topsisScores[alt] = topsis.scores?.[i] || 0
+  })
+
+  const wsmRanking = wsm.ranked_alternatives || []
+  const topsisRanking = topsis.ranked_alternatives || []
+
+  // Weights: array -> dict using criteria names
+  const criteriaKeys = results.criteria || ["efficiency", "safety", "emissions", "public_transport"]
+  const criteriaLabels = { efficiency: "Efficiency", safety: "Safety", emissions: "Emissions", public_transport: "Public Transport" }
+  const weightsArr = results.weights || []
+  const weights = {}
+  criteriaKeys.forEach((c, i) => { weights[c] = weightsArr[i] || 0 })
+
   const sensitivity = results.sensitivity_analysis || []
 
-  // Radar chart data
-  const normMatrix = results.normalized_matrix || {}
-  const criteria = ["throughput", "safety_score", "emissions", "bus_delay"]
-  const criteriaLabels = { throughput: "Throughput", safety_score: "Safety", emissions: "Low Emissions", bus_delay: "Low Bus Delay" }
-  const radarData = criteria.map(c => {
+  // Radar chart data from WSM normalized matrix (2D array)
+  const normMatrix2D = wsm.normalized_matrix || []
+  const radarData = criteriaKeys.map((c, ci) => {
     const point = { criterion: criteriaLabels[c] || c }
-    Object.entries(normMatrix).forEach(([policy, vals]) => {
-      // For cost criteria (emissions, bus_delay), invert for radar
-      let val = vals[c] || 0
-      if (c === "emissions" || c === "bus_delay") val = 1 - val
-      point[policy] = Math.round(val * 100)
+    alternatives.forEach((alt, ai) => {
+      let val = normMatrix2D[ai]?.[ci] || 0
+      // For cost criteria, invert for radar (higher = better)
+      if (c === "emissions" || c === "public_transport") val = 1 - val
+      point[alt] = Math.round(val * 100)
     })
     return point
   })
 
   // Score comparison bar chart
-  const scoreData = Object.keys(wsmScores).map(p => ({
+  const scoreData = alternatives.map(p => ({
     policy: p.length > 15 ? p.substring(0, 14) + "..." : p,
     fullPolicy: p,
     WSM: Math.round(wsmScores[p] * 1000) / 1000,
@@ -104,7 +118,7 @@ export default function MCDMAnalysis({ data }) {
         {/* Criteria Weights */}
         <div className="card">
           <div className="section-title">
-            <span className="dot" style={{ background: "var(--gold)" }} />
+            <span className="dot" style={{ background: "var(--cyan)" }} />
             Criteria Weights
           </div>
           {Object.entries(weights).map(([c, w]) => (
@@ -129,11 +143,11 @@ export default function MCDMAnalysis({ data }) {
           {wsmRanking.map((p, i) => (
             <div key={p} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-              background: i === 0 ? "rgba(245,158,11,0.06)" : "transparent",
+              background: i === 0 ? "rgba(0,212,255,0.06)" : "transparent",
               borderRadius: 8, marginBottom: 4,
-              border: i === 0 ? "1px solid rgba(245,158,11,0.15)" : "1px solid transparent"
+              border: i === 0 ? "1px solid rgba(0,212,255,0.15)" : "1px solid transparent"
             }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: i === 0 ? "var(--gold)" : "var(--text-muted)", width: 22 }}>#{i + 1}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: i === 0 ? "var(--cyan)" : "var(--text-muted)", width: 22 }}>#{i + 1}</span>
               <span style={{ flex: 1, fontSize: 12, color: i === 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>{p}</span>
               <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 700, color: AGENT_COLORS[p] || "var(--text-label)" }}>
                 {wsmScores[p]?.toFixed(3)}
@@ -151,11 +165,11 @@ export default function MCDMAnalysis({ data }) {
           {topsisRanking.map((p, i) => (
             <div key={p} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-              background: i === 0 ? "rgba(245,158,11,0.06)" : "transparent",
+              background: i === 0 ? "rgba(0,212,255,0.06)" : "transparent",
               borderRadius: 8, marginBottom: 4,
-              border: i === 0 ? "1px solid rgba(245,158,11,0.15)" : "1px solid transparent"
+              border: i === 0 ? "1px solid rgba(0,212,255,0.15)" : "1px solid transparent"
             }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: i === 0 ? "var(--gold)" : "var(--text-muted)", width: 22 }}>#{i + 1}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: i === 0 ? "var(--cyan)" : "var(--text-muted)", width: 22 }}>#{i + 1}</span>
               <span style={{ flex: 1, fontSize: 12, color: i === 0 ? "var(--text-primary)" : "var(--text-secondary)" }}>{p}</span>
               <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 700, color: AGENT_COLORS[p] || "var(--text-label)" }}>
                 {topsisScores[p]?.toFixed(3)}
@@ -175,11 +189,11 @@ export default function MCDMAnalysis({ data }) {
           <ResponsiveContainer width="100%" height={280}>
             <RadarChart data={radarData}>
               <PolarGrid stroke="rgba(255,255,255,0.06)" />
-              <PolarAngleAxis dataKey="criterion" tick={{ fill: "#a8a29e", fontSize: 10 }} />
+              <PolarAngleAxis dataKey="criterion" tick={{ fill: "#a1a1aa", fontSize: 10 }} />
               <PolarRadiusAxis tick={false} axisLine={false} domain={[0, 100]} />
-              {Object.keys(normMatrix).map(p => (
+              {alternatives.map(p => (
                 <Radar key={p} name={p} dataKey={p}
-                  stroke={AGENT_COLORS[p] || "#78716c"} fill={AGENT_COLORS[p] || "#78716c"} fillOpacity={0.08} strokeWidth={1.5} />
+                  stroke={AGENT_COLORS[p] || "#71717a"} fill={AGENT_COLORS[p] || "#71717a"} fillOpacity={0.08} strokeWidth={1.5} />
               ))}
             </RadarChart>
           </ResponsiveContainer>
@@ -193,8 +207,8 @@ export default function MCDMAnalysis({ data }) {
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={scoreData} barGap={3}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="policy" tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
-              <YAxis tick={{ fill: "#a8a29e", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
+              <XAxis dataKey="policy" tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
+              <YAxis tick={{ fill: "#a1a1aa", fontSize: 9 }} axisLine={false} tickLine={false} domain={[0, 1]} />
               <Tooltip contentStyle={ttStyle} />
               <Bar dataKey="WSM" fill="#3B82F6" radius={[3, 3, 0, 0]} />
               <Bar dataKey="TOPSIS" fill="#8B5CF6" radius={[3, 3, 0, 0]} />
@@ -210,31 +224,41 @@ export default function MCDMAnalysis({ data }) {
             <span className="dot" style={{ background: "var(--purple)" }} />
             Sensitivity Analysis (Weight Variations)
           </div>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 14 }}>
+            Each criterion weight is varied from -15% to +15% while other weights are redistributed proportionally. Shows how sensitive the ranking is to weight changes.
+          </p>
           <div style={{ overflowX: "auto" }}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Weight Set</th>
-                  <th style={{ textAlign: "right" }}>Throughput</th>
-                  <th style={{ textAlign: "right" }}>Safety</th>
-                  <th style={{ textAlign: "right" }}>Emissions</th>
-                  <th style={{ textAlign: "right" }}>Bus Delay</th>
+                  <th>Criterion</th>
+                  <th style={{ textAlign: "center" }}>Base Weight</th>
+                  <th style={{ textAlign: "center" }}>Weight -15%</th>
+                  <th>WSM Winner</th>
+                  <th>TOPSIS Winner</th>
+                  <th style={{ textAlign: "center" }}>Weight +15%</th>
                   <th>WSM Winner</th>
                   <th>TOPSIS Winner</th>
                 </tr>
               </thead>
               <tbody>
-                {sensitivity.map((s, i) => (
-                  <tr key={i}>
-                    <td className="highlight">{s.label || `Set ${i + 1}`}</td>
-                    <td className="mono" style={{ textAlign: "right" }}>{(s.weights?.throughput * 100 || 0).toFixed(0)}%</td>
-                    <td className="mono" style={{ textAlign: "right" }}>{(s.weights?.safety_score * 100 || 0).toFixed(0)}%</td>
-                    <td className="mono" style={{ textAlign: "right" }}>{(s.weights?.emissions * 100 || 0).toFixed(0)}%</td>
-                    <td className="mono" style={{ textAlign: "right" }}>{(s.weights?.bus_delay * 100 || 0).toFixed(0)}%</td>
-                    <td><span className="badge-blue">{s.wsm_winner}</span></td>
-                    <td><span className="badge-purple">{s.topsis_winner}</span></td>
-                  </tr>
-                ))}
+                {sensitivity.map((s, i) => {
+                  const low = s.variations?.[0]
+                  const high = s.variations?.[s.variations.length - 1]
+                  const baseW = weightsArr[i] || 0
+                  return (
+                    <tr key={i}>
+                      <td className="highlight">{criteriaLabels[s.criterion] || s.criterion}</td>
+                      <td className="mono" style={{ textAlign: "center" }}>{(baseW * 100).toFixed(0)}%</td>
+                      <td className="mono" style={{ textAlign: "center" }}>{low ? (low.modified_weight * 100).toFixed(0) + "%" : "-"}</td>
+                      <td><span className="badge-blue">{low ? alternatives[low.wsm_ranking?.[0]] || "-" : "-"}</span></td>
+                      <td><span className="badge-purple">{low ? alternatives[low.topsis_ranking?.[0]] || "-" : "-"}</span></td>
+                      <td className="mono" style={{ textAlign: "center" }}>{high ? (high.modified_weight * 100).toFixed(0) + "%" : "-"}</td>
+                      <td><span className="badge-blue">{high ? alternatives[high.wsm_ranking?.[0]] || "-" : "-"}</span></td>
+                      <td><span className="badge-purple">{high ? alternatives[high.topsis_ranking?.[0]] || "-" : "-"}</span></td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
