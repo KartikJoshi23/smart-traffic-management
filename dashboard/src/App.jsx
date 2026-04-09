@@ -44,7 +44,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-page)" }}>
       {/* Header */}
-      <header style={{ background: "linear-gradient(135deg, #111116 0%, #16161d 50%, #131318 100%)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <header style={{ background: "linear-gradient(135deg, rgba(14,14,20,0.95) 0%, rgba(20,20,28,0.92) 50%, rgba(16,16,22,0.95) 100%)", borderBottom: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(20px) saturate(140%)", WebkitBackdropFilter: "blur(20px) saturate(140%)" }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {/* Traffic light SVG */}
@@ -78,7 +78,7 @@ export default function App() {
       </header>
 
       {/* Navigation */}
-      <nav style={{ background: "linear-gradient(135deg, #14141a 0%, #1a1a24 40%, #1a1820 70%, #161620 100%)", borderBottom: "1px solid rgba(255,255,255,0.08)", borderTop: "1px solid rgba(255,255,255,0.03)" }}>
+      <nav style={{ background: "linear-gradient(135deg, rgba(16,16,22,0.95) 0%, rgba(22,22,30,0.92) 40%, rgba(20,20,26,0.93) 70%, rgba(18,18,24,0.95) 100%)", borderBottom: "none", borderTop: "1px solid rgba(255,255,255,0.03)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
         <div style={{ maxWidth: 1480, margin: "0 auto", padding: "0 28px", display: "flex", gap: 4, alignItems: "center" }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -90,12 +90,20 @@ export default function App() {
           ))}
         </div>
       </nav>
+      <div style={{ height: 1, background: "linear-gradient(90deg, transparent 5%, rgba(59,130,246,0.2) 20%, rgba(168,85,247,0.2) 40%, rgba(34,197,94,0.2) 60%, rgba(245,158,11,0.2) 80%, transparent 95%)" }}/>
 
       {/* Content */}
       <main style={{ maxWidth: 1480, margin: "0 auto", padding: "28px 32px" }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: 80, color: "var(--text-muted)" }}>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>Loading simulation data...</div>
+          <div style={{ textAlign: "center", padding: 80 }}>
+            <div style={{ width: 48, height: 48, margin: "0 auto 16px", borderRadius: 14, background: "var(--bg-elevated)", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid var(--border-base)" }}>
+              <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
+                <circle cx="9" cy="4" r="2.5" fill="#ef4444" opacity="0.3"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" begin="0s" repeatCount="indefinite"/></circle>
+                <circle cx="9" cy="9" r="2.5" fill="#f59e0b" opacity="0.3"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" begin="0.5s" repeatCount="indefinite"/></circle>
+                <circle cx="9" cy="14" r="2.5" fill="#22c55e" opacity="0.3"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" begin="1s" repeatCount="indefinite"/></circle>
+              </svg>
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)" }}>Loading simulation data...</div>
           </div>
         ) : (
           <>
@@ -109,7 +117,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid var(--border-dim)", padding: "24px 32px", textAlign: "center" }}>
+      <footer style={{ borderTop: "1px solid var(--border-dim)", padding: "28px 32px", textAlign: "center", background: "linear-gradient(180deg, transparent, rgba(14,14,20,0.5))" }}>
         <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
           Made with <span style={{ color: "#ef4444" }}>{String.fromCodePoint(10084)}{String.fromCodePoint(65039)}</span> by{" "}
           {["Kartik Joshi","Anurag Deverakonda","Nandana Santosh","Weiqi Liu","Advait Dalvi","Gautam Barai"].map((n,i,a) => (

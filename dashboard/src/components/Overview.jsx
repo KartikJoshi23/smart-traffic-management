@@ -135,7 +135,7 @@ export default function Overview({ data }) {
       </div>
 
       {/* Economic Impact */}
-      <div className="card" style={{ background: "linear-gradient(135deg, var(--bg-card) 0%, #1a1a2e 100%)", borderLeft: "3px solid #06b6d4" }}>
+      <div className="card" style={{ background: "linear-gradient(135deg, rgba(18,18,28,0.82) 0%, rgba(20,20,38,0.6) 100%)", borderLeft: "3px solid #06b6d4" }}>
         <div className="section-head">
           <div className="section-icon" style={{ background: "rgba(6,182,212,0.12)" }}>
             <DollarSign size={15} style={{ color: "#06b6d4" }}/>
@@ -223,8 +223,16 @@ export default function Overview({ data }) {
             const zones = ["#3b82f6","#a855f7","#f59e0b","#22c55e"]
             const zoneColor = zones[Math.floor(i / 4)]
             return (
-              <div key={i} style={{ padding: "12px 14px", borderRadius: 10, background: "var(--bg-elevated)", border: "1px solid var(--border-dim)",
-                borderTop: "2px solid " + zoneColor }}>
+              <div key={i} style={{ padding: "12px 14px", borderRadius: 12,
+                background: "linear-gradient(135deg, rgba(30,30,38,0.6), rgba(24,24,30,0.4))",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderTop: "2px solid " + zoneColor,
+                backdropFilter: "blur(12px)",
+                transition: "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+                cursor: "default",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = zoneColor + "40"; e.currentTarget.style.boxShadow = "0 8px 24px -4px rgba(0,0,0,0.3), 0 0 16px -4px " + zoneColor + "25" }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)"; e.currentTarget.style.boxShadow = "none" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-white)" }}>{name}</div>
                 <div style={{ fontSize: 9, color: zoneColor, fontWeight: 600, marginTop: 2 }}>
                   {["Deira","Downtown","Jumeirah","South Dubai"][Math.floor(i / 4)]}

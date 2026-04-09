@@ -126,8 +126,13 @@ export default function LiveSimulation({ data }) {
           <span style={{ fontSize: 10, color: "var(--text-faint)" }}>Speed</span>
           <input type="range" min={50} max={800} value={800 - speed} onChange={e => setSpeed(800 - +e.target.value)} style={{ width: 80 }}/>
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>
-          Step {step} / {maxStep}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 100, height: 4, background: "var(--bg-elevated)", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ width: (step / Math.max(maxStep, 1) * 100) + "%", height: "100%", background: ac, borderRadius: 4, transition: "width 0.15s ease" }}/>
+          </div>
+          <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "monospace", minWidth: 80, textAlign: "right" }}>
+            {step} / {maxStep}
+          </span>
         </div>
       </div>
 
@@ -153,12 +158,12 @@ export default function LiveSimulation({ data }) {
         <div className="card" style={{ padding: 20 }}>
           <svg viewBox="0 0 820 740" style={{ width: "100%", maxHeight: 580, borderRadius: 10 }}>
             {/* Background */}
-            <rect width="820" height="740" fill="#0c0c0f" rx="10"/>
+            <rect width="820" height="740" fill="#0a0a10" rx="12"/>
 
             {/* Grid pattern */}
             <defs>
-              <pattern id="gridP" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5"/>
+              <pattern id="gridP" width="32" height="32" patternUnits="userSpaceOnUse">
+                <circle cx="16" cy="16" r="0.5" fill="rgba(255,255,255,0.05)"/>
               </pattern>
               {/* Animated vehicle flow on horizontal roads */}
               {[0,1,2,3].map(i => {
@@ -204,12 +209,13 @@ export default function LiveSimulation({ data }) {
               })
             })}
 
-            {/* Zone labels - left side with background pill */}
+            {/* Zone labels */}
             {ZONES.map((z, i) => {
               const zy = 118 + i * 155
               return <g key={z}>
-                <rect x={8} y={zy - 10} width={68} height={20} rx={6} fill={ZONE_COLORS[i]} opacity={0.12}/>
-                <text x={42} y={zy + 3} textAnchor="middle" fill={ZONE_COLORS[i]} fontSize="9" fontWeight="800" fontFamily="Inter">{z}</text>
+                <rect x={8} y={zy - 11} width={70} height={22} rx={7} fill={ZONE_COLORS[i]} opacity={0.08}/>
+                <rect x={8} y={zy - 11} width={70} height={22} rx={7} fill="none" stroke={ZONE_COLORS[i]} strokeWidth={0.5} opacity={0.2}/>
+                <text x={43} y={zy + 3} textAnchor="middle" fill={ZONE_COLORS[i]} fontSize="8.5" fontWeight="800" fontFamily="Inter" letterSpacing="0.05em">{z}</text>
               </g>
             })}
 
@@ -217,8 +223,10 @@ export default function LiveSimulation({ data }) {
             {[0,1,2,3].map(i => {
               const y = 110 + i * 155
               return <g key={"rh"+i}>
-                <rect x={100} y={y-18} width={680} height={36} fill="#151518" rx="3"/>
-                <line x1={100} y1={y} x2={780} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
+                <rect x={100} y={y-18} width={680} height={36} fill="#111117" rx="2"/>
+                <line x1={100} y1={y-18} x2={780} y2={y-18} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5"/>
+                <line x1={100} y1={y+18} x2={780} y2={y+18} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5"/>
+                <line x1={100} y1={y} x2={780} y2={y} stroke="rgba(250,204,21,0.12)" strokeWidth="1" strokeDasharray="14 10"/>
               </g>
             })}
 
@@ -226,8 +234,10 @@ export default function LiveSimulation({ data }) {
             {[0,1,2,3].map(i => {
               const x = 200 + i * 165
               return <g key={"rv"+i}>
-                <rect x={x-18} y={55} width={36} height={650} fill="#151518" rx="3"/>
-                <line x1={x} y1={55} x2={x} y2={705} stroke="rgba(255,255,255,0.06)" strokeWidth="1" strokeDasharray="10 8"/>
+                <rect x={x-18} y={55} width={36} height={650} fill="#111117" rx="2"/>
+                <line x1={x-18} y1={55} x2={x-18} y2={705} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5"/>
+                <line x1={x+18} y1={55} x2={x+18} y2={705} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5"/>
+                <line x1={x} y1={55} x2={x} y2={705} stroke="rgba(250,204,21,0.12)" strokeWidth="1" strokeDasharray="14 10"/>
               </g>
             })}
 
@@ -243,8 +253,14 @@ export default function LiveSimulation({ data }) {
 
               return (
                 <g key={i} onClick={() => setSelInt(i)} style={{ cursor: "pointer" }}>
-                  {/* Selection highlight */}
-                  {isSel && <circle cx={cx} cy={cy} r={28} fill="none" stroke="white" strokeWidth={1.5} strokeDasharray="4 3" opacity={0.4}/>}
+                  {/* Selection glow */}
+                  {isSel && <>
+                    <circle cx={cx} cy={cy} r={30} fill="none" stroke={ac} strokeWidth={1.5} opacity={0.2}>
+                      <animate attributeName="r" values="28;32;28" dur="2.5s" repeatCount="indefinite"/>
+                      <animate attributeName="opacity" values="0.2;0.08;0.2" dur="2.5s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx={cx} cy={cy} r={26} fill="none" stroke="white" strokeWidth={1} opacity={0.3}/>
+                  </>}
 
                   {/* Emergency pulse */}
                   {hasEms && <circle cx={cx} cy={cy} r={26} fill="none" stroke="#3b82f6" strokeWidth={2} opacity={0.6}>
@@ -252,15 +268,21 @@ export default function LiveSimulation({ data }) {
                     <animate attributeName="opacity" values="0.6;0.1;0.6" dur="1s" repeatCount="indefinite"/>
                   </circle>}
 
+                  {/* Junction box */}
+                  <rect x={cx-21} y={cy-21} width={42} height={42} rx={5} fill="#0e0e14" stroke="rgba(255,255,255,0.04)" strokeWidth={0.5}/>
+
                   {/* Outer congestion ring */}
-                  <circle cx={cx} cy={cy} r={22} fill="none" stroke={cg.color} strokeWidth={2.5} opacity={0.4}/>
+                  <circle cx={cx} cy={cy} r={22} fill="none" stroke={cg.color} strokeWidth={2} opacity={0.35}/>
 
                   {/* Main node */}
-                  <circle cx={cx} cy={cy} r={18} fill="#111115" stroke={isSel ? "white" : cg.color} strokeWidth={isSel ? 2 : 1.2}/>
+                  <circle cx={cx} cy={cy} r={18} fill="#111118" stroke={isSel ? "white" : cg.color} strokeWidth={isSel ? 1.5 : 1}/>
 
-                  {/* Traffic signal: green for active direction */}
+                  {/* Signal glow */}
+                  <circle cx={cx} cy={cy} r={12} fill={isGreenNS ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)"}/>
+
+                  {/* Traffic signal */}
                   <circle cx={cx} cy={cy} r={6} fill={isGreenNS ? "#22c55e" : "#ef4444"} opacity={0.9}/>
-                  <circle cx={cx} cy={cy} r={9} fill="none" stroke={isGreenNS ? "#22c55e" : "#ef4444"} strokeWidth={0.7} opacity={0.3}/>
+                  <circle cx={cx} cy={cy} r={9} fill="none" stroke={isGreenNS ? "#22c55e" : "#ef4444"} strokeWidth={0.7} opacity={0.25}/>
 
                   {/* Direction indicator text */}
                   <text x={cx} y={cy + 14} textAnchor="middle" fill={isGreenNS ? "#4ade80" : "#f87171"} fontSize="5" fontWeight="700" fontFamily="Inter">{isGreenNS ? "NS" : "EW"}</text>
