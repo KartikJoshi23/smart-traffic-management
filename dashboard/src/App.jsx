@@ -59,7 +59,7 @@ export default function App() {
               <h1 style={{ fontSize: 16, fontWeight: 800, color: "var(--text-white)", letterSpacing: "-0.02em" }}>
                 Dubai Smart Traffic Management
               </h1>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+              <p style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 2, letterSpacing: "0.01em" }}>
                 Multi-Agent Reinforcement Learning {String.fromCharCode(183)} Q-Learning & SARSA {String.fromCharCode(183)} WSM & TOPSIS
               </p>
             </div>

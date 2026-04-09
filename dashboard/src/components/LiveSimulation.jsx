@@ -156,7 +156,7 @@ export default function LiveSimulation({ data }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16 }}>
         {/* SVG Grid */}
         <div className="card" style={{ padding: 20 }}>
-          <svg viewBox="0 0 820 740" style={{ width: "100%", maxHeight: 580, borderRadius: 10 }}>
+          <svg viewBox="0 0 820 740" style={{ width: "100%", borderRadius: 10 }}>
             {/* Background */}
             <rect width="820" height="740" fill="#0a0a10" rx="12"/>
 

@@ -392,7 +392,7 @@ class SimulationRunner:
 
         # 3. Live simulation frames for each agent type
         for agent_type in self.AGENT_TYPES:
-            frames = self.generate_live_simulation_data(agent_type, "normal", 100)
+            frames = self.generate_live_simulation_data(agent_type, "normal", 200)
             filename = f"live_simulation_{agent_type}.json"
             with open(os.path.join(output_dir, filename), "w") as f:
                 json.dump(frames, f, indent=2, cls=NumpyEncoder)
