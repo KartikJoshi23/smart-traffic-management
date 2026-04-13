@@ -82,17 +82,31 @@ export default function LiveSimulation({ data }) {
   const overrides = frame?.overrides || []
   const selOverride = overrides.find(o => o.intersection === selInt)
   let reason = "", conf = 50, factors = []
-  if (si && sqv) {
-    const q = sqv.q_values || [0,0,0]
-    const sorted = [...q].sort((a,b) => b - a)
-    conf = Math.min(97, Math.max(20, (sorted[0] - sorted[1]) * 30 + 50))
+  const isRL = agentType !== "fixed_timer"
+  if (si) {
+    const totalQ = Math.round(si.queue_ns + si.queue_ew)
+    const heavier = si.queue_ns >= si.queue_ew ? "NS" : "EW"
+    const lighter = heavier === "NS" ? "EW" : "NS"
+    const phaseDir = si.phase === 0 ? "NS" : "EW"
     if (agentType === "fixed_timer") {
-      conf = 100; reason = "Fixed 30s cycle (no adaptive logic)"; factors = ["Pre-programmed"]
-    } else {
-      const heavier = si.queue_ns >= si.queue_ew ? "NS" : "EW"
-      if (sa === 0) { reason = "Hold current phase - active queue being served"; factors = ["Q(Hold)=" + q[0].toFixed(2), heavier + " heavier"] }
-      else if (sa === 1) { reason = "Switch phase - serve waiting direction"; factors = ["Q(Switch)=" + q[1].toFixed(2), "Imbalance"] }
-      else { reason = "Extend green - near clearance"; factors = ["Q(Ext)=" + q[2].toFixed(2), "Efficiency"] }
+      conf = 100
+      reason = "Fixed 15-step cycle — currently serving " + phaseDir + " direction"
+      factors = ["Pre-programmed", phaseDir + " green", "Q:" + totalQ]
+    } else if (sqv) {
+      const q = sqv.q_values || [0, 0, 0]
+      const sorted = [...q].sort((a, b) => b - a)
+      conf = Math.min(97, Math.max(20, (sorted[0] - sorted[1]) * 30 + 50))
+      const qDiff = Math.abs(si.queue_ns - si.queue_ew)
+      if (sa === 0) {
+        reason = "HOLD " + phaseDir + " green — " + (qDiff < 3 ? "balanced queues, continue serving" : heavier + " queue (" + Math.round(si["queue_" + heavier.toLowerCase()]) + ") being drained")
+        factors = ["Q(H)=" + q[0].toFixed(2), "Q(S)=" + q[1].toFixed(2), "Q(E)=" + q[2].toFixed(2), phaseDir + " green"]
+      } else if (sa === 1) {
+        reason = "SWITCH to " + (phaseDir === "NS" ? "EW" : "NS") + " — " + lighter + " queue (" + Math.round(si["queue_" + lighter.toLowerCase()]) + ") waiting, imbalance=" + Math.round(qDiff)
+        factors = ["Q(H)=" + q[0].toFixed(2), "Q(S)=" + q[1].toFixed(2), "Q(E)=" + q[2].toFixed(2), "Imbalance:" + Math.round(qDiff)]
+      } else {
+        reason = "EXTEND " + phaseDir + " green — near clearance, " + heavier + " queue (" + Math.round(si["queue_" + heavier.toLowerCase()]) + ") almost drained"
+        factors = ["Q(H)=" + q[0].toFixed(2), "Q(S)=" + q[1].toFixed(2), "Q(E)=" + q[2].toFixed(2), "Efficiency"]
+      }
     }
     if (selOverride) {
       const proto = selOverride.reason.replace("_", " ")
@@ -352,10 +366,29 @@ export default function LiveSimulation({ data }) {
                   fontSize: 11, fontWeight: 700,
                   background: sa === i ? ACT_COLORS[i] : "var(--bg-elevated)",
                   color: sa === i ? "white" : "var(--text-faint)",
-                  border: sa === i ? "none" : "1px solid var(--border-dim)"
+                  border: sa === i ? "none" : "1px solid var(--border-dim)",
+                  transition: "all 0.2s ease"
                 }}>{a}</div>
               ))}
             </div>
+
+            {/* State context */}
+            {si && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                {[
+                  { l: "NS Q", v: Math.round(si.queue_ns), c: "#3b82f6" },
+                  { l: "EW Q", v: Math.round(si.queue_ew), c: "#f59e0b" },
+                  { l: "Phase", v: si.phase === 0 ? "NS" : "EW", c: si.phase === 0 ? "#22c55e" : "#ef4444" },
+                  { l: "Step", v: step, c: ac },
+                ].map((x, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: "center", padding: "4px 0", borderRadius: 6,
+                    background: "var(--bg-input)", fontSize: 9 }}>
+                    <div style={{ color: "var(--text-faint)", fontWeight: 600 }}>{x.l}</div>
+                    <div style={{ color: x.c, fontWeight: 800, fontSize: 12, fontFamily: "monospace" }}>{x.v}</div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Confidence */}
             <div style={{ marginBottom: 12 }}>
@@ -371,7 +404,7 @@ export default function LiveSimulation({ data }) {
 
             {/* Reasoning */}
             <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6, padding: "10px 12px",
-              background: "var(--bg-elevated)", borderRadius: 8 }}>
+              background: "var(--bg-elevated)", borderRadius: 8, transition: "all 0.2s ease" }}>
               {reason || "Click an intersection to view decision logic"}
             </div>
 
@@ -383,14 +416,18 @@ export default function LiveSimulation({ data }) {
               ))}
             </div>
 
-            {/* Q-values */}
-            {sqv?.q_values && (
+            {/* Q-values — only for RL agents */}
+            {isRL && sqv?.q_values && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-dim)" }}>
-                <div style={{ fontSize: 10, color: "var(--text-faint)", fontWeight: 700, marginBottom: 6 }}>Q-VALUES</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, color: "var(--text-faint)", fontWeight: 700 }}>Q-VALUES</span>
+                  <span style={{ fontSize: 9, color: "var(--text-faint)", fontFamily: "monospace" }}>visits: {sqv.state_visits || 0}</span>
+                </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   {sqv.q_values.map((q, i) => (
                     <div key={i} style={{ flex: 1, textAlign: "center", padding: 6, borderRadius: 6,
-                      background: sa === i ? ACT_COLORS[i] + "18" : "var(--bg-input)" }}>
+                      background: sa === i ? ACT_COLORS[i] + "18" : "var(--bg-input)",
+                      transition: "background 0.2s ease" }}>
                       <div style={{ fontSize: 8, color: ACT_COLORS[i], fontWeight: 600 }}>{ACTIONS[i]}</div>
                       <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-white)", fontFamily: "monospace" }}>{q.toFixed(3)}</div>
                     </div>
